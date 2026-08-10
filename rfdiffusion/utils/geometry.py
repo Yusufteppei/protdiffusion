@@ -1,6 +1,20 @@
 import torch
 import numpy as np
 
+## CONSTANTS
+
+# Bond lengths (Å)
+N_CA = torch.tensor(1.4966)
+CA_C = torch.tensor(1.5221)
+C_N = torch.tensor(1.2991)
+C_O = torch.tensor(1.231)
+
+# Bond angles (degrees → radians)
+CA_N_C = torch.deg2rad(torch.tensor(121.7))
+N_CA_C = torch.deg2rad(torch.tensor(107.0100))
+CA_C_N = torch.deg2rad(torch.tensor(116.2))
+C_N_CA = torch.deg2rad(torch.tensor(118.9957))
+
 
 def normalize(x):
     
@@ -49,7 +63,7 @@ def dihedral(
     return torch.atan2(y, x)
 
 
-def build_residue(
+def place_atom(
     a: torch.Tensor,
     b: torch.Tensor,
     c: torch.Tensor,
@@ -100,3 +114,65 @@ def build_residue(
     d = c + length.unsqueeze(-1) * direction
 
     return d
+
+
+def build_residue_backbone(
+    n: torch.Tensor,
+    ca: torch.Tensor,
+    c: torch.Tensor,
+    phi: torch.Tensor,
+    psi: torch.Tensor,
+    omega: torch.Tensor,
+):
+    """
+    Build the next residue's backbone.
+
+    Inputs:
+        n, ca, c : (..., 3)
+            Backbone atoms of residue i.
+
+        phi : (...)
+            φ of residue i+1
+
+        psi : (...)
+            ψ of residue i
+
+        omega : (...)
+            ω peptide bond between i and i+1
+
+    Returns:
+        n_next, ca_next, c_next : (..., 3)
+    """
+
+    # ψ_i determines N_{i+1}
+    n_next = place_atom(
+        n,
+        ca,
+        c,       
+        C_N,
+        C_N_CA,
+        psi,
+    )
+
+    # ω_i determines CA_{i+1}
+    ca_next = place_atom(
+        ca,
+        c,
+        n_next,
+        N_CA,
+        C_N_CA,
+        omega,
+    )
+
+    # φ_{i+1} determines C_{i+1}
+    c_next = place_atom(
+        c,
+        n_next,
+        ca_next,
+        CA_C,
+        N_CA_C,
+        phi,
+    )
+
+    return torch.stack([n_next, ca_next, c_next])
+

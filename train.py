@@ -4,21 +4,26 @@ from Bio.PDB import Atom
 from rfdiffusion.geometry import Rigid, Rotation
 import torch
 from rfdiffusion.data import Protein
+from rfdiffusion.utils import build_residue_backbone
+import math
+
+DTYPE = torch.float32
 
 a = load_pdb()
 
-R1 = torch.eye(3)
-t1 = torch.tensor([10., 0., 0.])
+n = a.coords[0, 0]
+ca = a.coords[0, 1]
+c = a.coords[0, 2]
 
-A = Rigid(Rotation(R1), t1)
+print(a.coords[:2])
 
-R2 = torch.eye(3)
-t2 = torch.tensor([0., 5., 0.])
 
-B = Rigid(Rotation(R2), t2)
+phi = torch.tensor(math.radians(-60.), dtype=DTYPE)
+psi = torch.tensor(math.radians(-45.), dtype=DTYPE)
+omega = torch.tensor(math.pi, dtype=DTYPE)
 
-C = A.compose(B)
+next = build_residue_backbone(
+    n, ca, c, phi, psi, omega
+)
 
-point = torch.tensor([1., 2., 3.])
-
-print(C.apply(point))
+print("next", next)
