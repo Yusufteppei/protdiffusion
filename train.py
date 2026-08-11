@@ -1,29 +1,17 @@
-from rfdiffusion.data import load_pdb, get_coords
-from inspect import signature
-from Bio.PDB import Atom
-from rfdiffusion.geometry import Rigid, Rotation
 import torch
-from rfdiffusion.data import Protein
-from rfdiffusion.utils import build_residue_backbone
-import math
+from rfdiffusion.model import RFDiffusion
+from rfdiffusion.data import load_pdb
+from rfdiffusion.tokenizer import ResidueTokenizer
 
-DTYPE = torch.float32
+tokenizer = ResidueTokenizer()
+model = RFDiffusion()
 
-a = load_pdb()
-
-n = a.coords[0, 0]
-ca = a.coords[0, 1]
-c = a.coords[0, 2]
-
-print(a.coords[:2])
+p = load_pdb()
+q = load_pdb("datasets/1VII.pdb")
 
 
-phi = torch.tensor(math.radians(-60.), dtype=DTYPE)
-psi = torch.tensor(math.radians(-45.), dtype=DTYPE)
-omega = torch.tensor(math.pi, dtype=DTYPE)
+seq = [ p.sequence, q.sequence ]
+seq_tokens = tokenizer.batch_encode(seq)
 
-next = build_residue_backbone(
-    n, ca, c, phi, psi, omega
-)
 
-print("next", next)
+model(batch=seq_tokens[0], mask=seq_tokens[1])
