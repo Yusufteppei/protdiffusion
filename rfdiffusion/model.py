@@ -11,6 +11,6 @@ class RFDiffusion(nn.Module):
 
 
     def forward(self, batch, mask):
-        msa, pair = self.input_embedder(batch)
-        print(msa.shape, pair.shape)
+        single, pair = self.input_embedder(batch)
+        print(single.shape, pair.shape)
         
