@@ -2,7 +2,29 @@ from Bio.PDB import PDBParser
 from rfdiffusion.data.protein import Protein
 from Bio.PDB.Structure import Structure
 import torch
+from Bio.SeqUtils import seq1
 
+
+def get_sequence(structure: Structure) -> str:
+    """
+    Extract the protein sequence from a Bio.PDB Structure.
+
+    Non-standard residues, waters, ligands, and hetero residues
+    are ignored.
+
+    Returns:
+        str: one-letter amino-acid sequence
+    """
+    sequence = []
+
+    for residue in structure.get_residues():
+        # ' ' means a standard ATOM residue rather than HETATM
+        if residue.id[0] != ' ':
+            continue
+
+        sequence.append(seq1(residue.resname))
+
+    return ''.join(sequence)
 
 parser = PDBParser(QUIET=True)
 
@@ -48,7 +70,8 @@ def get_coords(pdb_object: Structure) -> torch.Tensor:
 
 def load_pdb(path="datasets/1UBQ.pdb")-> Protein:
     structure = parser.get_structure("protein", path)
+    seq = get_sequence(structure)
     coords = get_coords(structure)
-    protein = Protein.from_coords(coords)
+    protein = Protein.from_coords(coords, sequence=seq)
     return protein
 

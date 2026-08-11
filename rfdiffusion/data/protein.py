@@ -12,9 +12,10 @@ class Protein:
 
     def __init__(self, 
                  rigids: list[Rigid], 
-                 sequence: torch.Tensor | None = None, 
+                 sequence: str | None = None, 
                  mask: torch.Tensor | None = None, 
-                 coords: torch.Tensor | None = None
+                 coords: torch.Tensor | None = None,
+                 seq_tokens: torch.Tensor | None = None,
                 ):
         """
           coords: In case PDB coordinates are passed in inference instead
@@ -26,16 +27,16 @@ class Protein:
         self.coords = coords
 
         if sequence is not None:
-            assert rigids.translation.shape[-2] == sequence.shape[-1]
+            len(rigids) == len(sequence)
 
     def __str__(self):
-        return "Protein ---"
+        return f"Protein <{self.__len__()}>"
 
     @classmethod
-    def from_coords(cls, coords: torch.Tensor, sequence=None, mask=None):
+    def from_coords(cls, coords: torch.Tensor, sequence=None, mask=None, seq_tokens=None):
         
         rigids = Rigid.from_coords(coords)
-        protein = cls(rigids=rigids, coords=coords, sequence=sequence, mask=mask)
+        protein = cls(rigids=rigids, coords=coords, sequence=sequence, mask=mask, seq_tokens=seq_tokens)
 
         protein.coords = coords
         return protein
