@@ -7,6 +7,65 @@ class Rotation:
     def __init__(self, matrix: torch.Tensor):
         self.matrix = matrix
 
+    @staticmethod
+    def from_rotvec(rotvec, eps=1e-8):
+        """
+        Convert rotation vectors to rotation matrices using
+        the SO(3) exponential map.
+
+        Args:
+            rotvec: (..., 3)
+            eps: numerical stability constant
+
+        Returns:
+            Rotation with rotation matrix (..., 3, 3)
+        """
+        theta = torch.linalg.norm(rotvec, dim=-1, keepdim=True)
+
+        # Skew-symmetric matrix [w]_x
+        x, y, z = rotvec.unbind(dim=-1)
+
+        zero = torch.zeros_like(x)
+
+        K = torch.stack([
+            zero, -z,    y,
+            z,     zero, -x,
+            -y,    x,    zero
+        ], dim=-1).reshape(*rotvec.shape[:-1], 3, 3)
+
+        # Rodrigues:
+        #
+        # R = I + sin(theta)/theta K
+        #       + (1-cos(theta))/theta² K²
+
+        theta2 = theta.square()
+
+        A = torch.where(
+            theta2 > eps,
+            torch.sin(theta) / theta,
+            1.0 - theta2 / 6.0
+        )
+
+        B = torch.where(
+            theta2 > eps,
+            (1.0 - torch.cos(theta)) / theta2,
+            0.5 - theta2 / 24.0
+        )
+
+        I = torch.eye(
+            3,
+            device=rotvec.device,
+            dtype=rotvec.dtype
+        )
+
+        R = (
+            I
+            + A[..., None] * K
+            + B[..., None] * (K @ K)
+        )
+
+        return Rotation(R)
+
     @classmethod
     def identity(cls):
         return cls(torch.eye(3))
@@ -15,11 +74,12 @@ class Rotation:
         R = self.matrix
         while R.ndim < x.ndim + 1:
             R = R.unsqueeze(-3)
-        print(f"R: {R.shape}")
-        return torch.matmul(
+        #print(f"R: {R.shape}")
+        return torch.einsum(
+            "...ij,...j->...i",
             R,
-            x.transpose(-2, -1)
-        ).transpose(-2, -1).squeeze(0)
+            x
+        )
 
     def inverse(self) -> Rotation:
         return Rotation(self.matrix.transpose(-1, -2))
@@ -41,7 +101,7 @@ class Rigid:
         self.rotation = rotation
         self.translation = translation
 
-
+    
     @classmethod
     def from_coords(cls, coords: torch.Tensor):
         """
@@ -104,6 +164,10 @@ class Rigid:
         """
 
         rot = self.rotation.compose(rigid2.rotation)
+        a = self.rotation.apply(rigid2.translation)
+        b = self.translation
+        print(rot.matrix.shape, a.shape, b.shape)
         trans = self.rotation.apply(rigid2.translation) + self.translation
 
         return Rigid(rotation=rot, translation=trans)
+
