@@ -12,11 +12,14 @@ class Rotation:
         return cls(torch.eye(3))
 
     def apply(self, x: torch.Tensor) -> torch.Tensor:
-        return torch.einsum(
-            "...ij,j->i",
-            self.matrix,
-            x
-        )
+        R = self.matrix
+        while R.ndim < x.ndim + 1:
+            R = R.unsqueeze(-3)
+        print(f"R: {R.shape}")
+        return torch.matmul(
+            R,
+            x.transpose(-2, -1)
+        ).transpose(-2, -1).squeeze(0)
 
     def inverse(self) -> Rotation:
         return Rotation(self.matrix.transpose(-1, -2))
@@ -83,7 +86,11 @@ class Rigid:
         return cls(torch.eye(3))
 
     def apply(self, x: torch.Tensor) -> torch.Tensor:
-        return self.rotation.apply(x) + self.translation
+        R = self.rotation.apply(x)
+        t = self.translation
+        while t.ndim < R.ndim:
+            t = t.unsqueeze(-2)
+        return R + t
 
 
     def inverse(self) -> Rigid:
