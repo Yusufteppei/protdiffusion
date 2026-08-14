@@ -74,5 +74,24 @@ class InvariantPointAttention(nn.Module):
 
         print(f"Attention : {attention.shape}")
         out = self.o_proj(attention)
-        print(out.shape)
+        print(f"IPA : {out.shape}")
         return out
+
+
+
+class IPATransition(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+        self.net = nn.Sequential(
+            nn.Linear(d_res, 4*d_res),
+            nn.GELU(),
+            nn.Linear(4*d_res, d_res)
+        )
+
+
+    def forward(self, single):
+        single = self.net(single)
+
+        return single
