@@ -16,7 +16,7 @@ class RFDiffusion(nn.Module):
         single, pair = self.input_embedder(batch)
         rigids = None
         for _ in range(self.trunks):
-            rigids = self.trunk(single, pair, rigids)
+            rigids = self.trunk(single, pair, rigids, mask)
 
         
         return single, pair, rigids

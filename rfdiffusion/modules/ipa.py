@@ -26,7 +26,7 @@ class InvariantPointAttention(nn.Module):
         self.o_proj = nn.Linear( 3*num_qk_points*num_heads + d_res, d_res)
 
 
-    def forward(self, single, pair, rigids):
+    def forward(self, single, pair, rigids, mask=None):
         B, L, d_res = single.shape
 
         Qp = self.qp_proj(single).view(B, L, n_h, self.num_qk_points, 3)
@@ -37,7 +37,7 @@ class InvariantPointAttention(nn.Module):
         Qp = rigids.apply(Qp).unsqueeze(2) # B, L, 1, H, qk, 3
         Kp = rigids.apply(Kp).unsqueeze(1) # B, 1, L, H, qk, 3
         Vp = rigids.apply(Vp).permute(0, 2, 1, 3, 4) # B, H, L, qk, 3
-        Vp = Vp.flatten(-2) # B, H, L, 3*qk
+        #Vp = Vp.flatten(-2) # B, H, L, 3*qk
 
  
         Qv = self.qv_proj(single).view(B, L, n_h, self.d_h).permute(0, 2, 1, 3) # B, H, L, d_h
@@ -59,16 +59,23 @@ class InvariantPointAttention(nn.Module):
         
         #print("Vector score", vector_score.shape)
 
-        score_proj = torch.softmax( vector_score + point_score + pair_score_bias , dim=-1)
+        score_proj = torch.softmax( vector_score + point_score + pair_score_bias , dim=-1) # B, H, L, L
 
 
         vector_attention = score_proj@Vv # B, H, L, d_h
         vector_attention = vector_attention.permute(0, 2, 1, 3) # B, L, H, d_h
         vector_attention = vector_attention.flatten(-2) # B, L, d_res
 
-        point_attention = score_proj@Vp # B, H, L, 3*qk
-        point_attention = point_attention.permute(0, 2, 1, 3 ) # B, L, H, 3*qk
-        point_attention = point_attention.flatten(-2) # B, L, H*3*qk
+        point_attention = torch.einsum(
+            "...ij,...jkl->...ikl",
+            score_proj,
+            Vp # B, H, L, qk, 3
+        ) # B, H, L, qk, 3
+      
+        point_attention = point_attention.transpose(1, 2) # B, L, H, qk, 3
+        point_attention = rigids.inverse().apply(point_attention)
+        #point_attention = point_attention.permute(0, 2, 1, 3 ) # B, L, H, 3*qk
+        point_attention = point_attention.flatten(-3) # B, L, H*3*qk
 
         attention = torch.concat([ vector_attention, point_attention ], dim=-1) # B, L, d_res + 3*qk*H
 

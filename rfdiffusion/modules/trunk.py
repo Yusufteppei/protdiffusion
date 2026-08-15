@@ -15,7 +15,7 @@ class Trunk(nn.Module):
         self.backbone_update = BackboneUpdate()
 
 
-    def forward(self, single, pair, rigids=None):
+    def forward(self, single, pair, rigids=None, mask=None):
 
         B, L, _ = single.shape
         if rigids is None:
@@ -24,7 +24,7 @@ class Trunk(nn.Module):
                 torch.zeros(B, L, 3)
             )
 
-        single = single + self.ipa(single, pair, rigids)
+        single = single + self.ipa(single, pair, rigids, mask)
         single = self.layer_norm(single)
         single = single + self.ipa_transition(single)
 
