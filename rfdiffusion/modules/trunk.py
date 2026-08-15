@@ -15,14 +15,14 @@ class Trunk(nn.Module):
         self.backbone_update = BackboneUpdate()
 
 
-    def forward(self, single, pair):
+    def forward(self, single, pair, rigids=None):
 
         B, L, _ = single.shape
-
-        rigids = Rigid(
-            Rotation.identity(),
-            torch.zeros(B, L, 3)
-        )
+        if rigids is None:
+            rigids = Rigid(
+                Rotation.identity(),
+                torch.zeros(B, L, 3)
+            )
 
         single = single + self.ipa(single, pair, rigids)
         single = self.layer_norm(single)
@@ -34,4 +34,4 @@ class Trunk(nn.Module):
 
         rigids = Rigid(rotation, translation).compose(rigids)
 
-        
+        return rigids

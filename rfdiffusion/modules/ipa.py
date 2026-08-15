@@ -72,9 +72,8 @@ class InvariantPointAttention(nn.Module):
 
         attention = torch.concat([ vector_attention, point_attention ], dim=-1) # B, L, d_res + 3*qk*H
 
-        print(f"Attention : {attention.shape}")
         out = self.o_proj(attention)
-        print(f"IPA : {out.shape}")
+
         return out
 
 

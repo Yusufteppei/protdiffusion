@@ -166,7 +166,7 @@ class Rigid:
         rot = self.rotation.compose(rigid2.rotation)
         a = self.rotation.apply(rigid2.translation)
         b = self.translation
-        print(rot.matrix.shape, a.shape, b.shape)
+        #print(rot.matrix.shape, a.shape, b.shape)
         trans = self.rotation.apply(rigid2.translation) + self.translation
 
         return Rigid(rotation=rot, translation=trans)
