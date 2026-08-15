@@ -74,7 +74,6 @@ class Rotation:
         R = self.matrix
         while R.ndim < x.ndim + 1:
             R = R.unsqueeze(-3)
-        #print(f"R: {R.shape}")
         return torch.einsum(
             "...ij,...j->...i",
             R,
@@ -108,16 +107,9 @@ class Rigid:
             ORDER - N, CA, C
             C - CA : x axis
         """
-        #print(coords.shape)
-        #N = coords[..., 0] # <-----------------
-        #CA = coords[..., 1] # <-----------------
-        #C = coords[..., 2] # <-----------------
-
-        #a = C - CA
-        #b = N - CA
+        
 
         CA = coords[:,1,:].unsqueeze(1).expand(-1, 3, 3)
-        #print("CA", CA.shape)
 
         a = ( coords - CA ) [:,2]
         b = ( coords - CA ) [:,0]
@@ -127,15 +119,13 @@ class Rigid:
 
         e1 = a_ 
 
-        x = torch.einsum("bi,bj->b",b_, e1)
-        #print(x)
+        
         projection = torch.sum(b * e1, dim=-1, keepdim=True)
         e2 = normalize(b - projection * e1)
         e3 = torch.cross(e1, e2, dim=-1)
 
         R = torch.stack([e1, e2, e3], dim=-1)
         t = CA[:, 1,:]
-        #print(f"rigids shape: {R.shape}")
         rigids = [ cls(rotation=Rotation(R[i]), translation=t[i]) for i in range(R.shape[-3]) ]
         return rigids
 
@@ -164,9 +154,6 @@ class Rigid:
         """
 
         rot = self.rotation.compose(rigid2.rotation)
-        a = self.rotation.apply(rigid2.translation)
-        b = self.translation
-        #print(rot.matrix.shape, a.shape, b.shape)
         trans = self.rotation.apply(rigid2.translation) + self.translation
 
         return Rigid(rotation=rot, translation=trans)

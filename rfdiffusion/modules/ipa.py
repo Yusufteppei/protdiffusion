@@ -37,7 +37,6 @@ class InvariantPointAttention(nn.Module):
         Qp = rigids.apply(Qp).unsqueeze(2) # B, L, 1, H, qk, 3
         Kp = rigids.apply(Kp).unsqueeze(1) # B, 1, L, H, qk, 3
         Vp = rigids.apply(Vp).permute(0, 2, 1, 3, 4) # B, H, L, qk, 3
-        #Vp = Vp.flatten(-2) # B, H, L, 3*qk
 
  
         Qv = self.qv_proj(single).view(B, L, n_h, self.d_h).permute(0, 2, 1, 3) # B, H, L, d_h
@@ -52,12 +51,10 @@ class InvariantPointAttention(nn.Module):
         point_score = - ( Qp - Kp ).square().sum(dim=-1) / 2 # B, L, L, H, qk
         point_score = point_score.permute(0, 3, 1, 2, 4 ).sum(dim=-1)# B, H, L, L
 
-        #print("Point score", point_score.shape)
     
         # Vector Attention
         vector_score =  torch.matmul( Qv, Kv.transpose(-2, -1) ) / math.sqrt(self.d_h) # B, H, L, L
-        
-        #print("Vector score", vector_score.shape)
+
 
         score_proj = torch.softmax( vector_score + point_score + pair_score_bias , dim=-1) # B, H, L, L
 
@@ -74,7 +71,6 @@ class InvariantPointAttention(nn.Module):
       
         point_attention = point_attention.transpose(1, 2) # B, L, H, qk, 3
         point_attention = rigids.inverse().apply(point_attention)
-        #point_attention = point_attention.permute(0, 2, 1, 3 ) # B, L, H, 3*qk
         point_attention = point_attention.flatten(-3) # B, L, H*3*qk
 
         attention = torch.concat([ vector_attention, point_attention ], dim=-1) # B, L, d_res + 3*qk*H
