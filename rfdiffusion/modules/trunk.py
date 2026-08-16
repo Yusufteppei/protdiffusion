@@ -34,4 +34,4 @@ class Trunk(nn.Module):
 
         rigids = Rigid(rotation, translation).compose(rigids)
 
-        return rigids
+        return single, pair, rigids

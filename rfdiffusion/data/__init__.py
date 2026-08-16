@@ -1,2 +1,1 @@
-from .pdb import load_pdb, get_coords
-from .protein import Protein
+from .protein import Protein, get_coords, get_sequence
