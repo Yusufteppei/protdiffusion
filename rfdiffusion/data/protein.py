@@ -33,6 +33,7 @@ def get_sequence(structure: Structure) -> str:
 
 
 def get_coords(pdb_object: Structure) -> torch.Tensor:
+    # FIX BACKBONE ORDER RELIANCE TO ACCOMODATE NON-PROTEIN RESIDUES
     p = pdb_object
 
     coords = torch.Tensor()
@@ -78,7 +79,7 @@ class Protein:
 
 
     def __init__(self, 
-                 rigids: list[Rigid], 
+                 rigids: Rigid, 
                  sequence: str | None = None, 
                  mask: torch.Tensor | None = None, 
                  coords: torch.Tensor | None = None,
@@ -92,14 +93,16 @@ class Protein:
         self.sequence = sequence
         self.mask = mask
         self.coords = coords
+        self.pad_rigid = Rigid.identity()
 
         if sequence is not None:
-            len(rigids) == len(sequence)
+            rigids.translation.shape[0] == len(sequence)
 
     def __str__(self):
         return f"Protein <{self.__len__()}>"
-
-    def load_pdb(code="1UBQ")-> Protein:
+    
+    @classmethod
+    def load_pdb(cls, code="1UBQ")-> Protein:
         ## Deprecate the path
         try:
             structure = parser.get_structure("protein", f"proteins/{code}.pdb")
@@ -109,10 +112,10 @@ class Protein:
             
             structure = parser.get_structure("protein", f"proteins/{code}.pdb")
 
-        seq = get_sequence(structure)
-        coords = get_coords(structure)
-        protein = Protein.from_coords(coords, sequence=seq)
-        return protein
+        #seq = get_sequence(structure)
+        #coords = get_coords(structure)
+        #protein = Protein.from_coords(coords, sequence=seq)
+        return structure
 
     @classmethod
     def from_coords(cls, coords: torch.Tensor, sequence=None, mask=None, seq_tokens=None):
@@ -124,7 +127,7 @@ class Protein:
         return protein
 
     @classmethod
-    def from_pdb(cls, code: str="1UBQ", mask=None, seq_tokens=None):
+    def from_code(cls, code: str="1UBQ", mask=None, seq_tokens=None):
         obj = cls.load_pdb(code)
         coords = get_coords(obj)
         sequence = get_sequence(obj)
@@ -133,5 +136,12 @@ class Protein:
 
         return protein
 
+    @classmethod
+    def from_codes(cls, codes: list):
+        return [ cls.from_code(i) for i in codes]
+
     def __len__(self):
-        return len(self.rigids)
+        return self.rigids.translation.shape[0]
+
+    def extend(self, max_len):
+        self.rigids += [self.pad_rigid] * (max_len - len(self.rigids))

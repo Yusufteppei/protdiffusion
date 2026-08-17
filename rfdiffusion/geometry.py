@@ -127,13 +127,14 @@ class Rigid:
         R = torch.stack([e1, e2, e3], dim=-1)
         t = CA[:, 1,:]
         rigids = [ cls(rotation=Rotation(R[i]), translation=t[i]) for i in range(R.shape[-3]) ]
+        rigids = cls.from_list(rigids)
         return rigids
 
 
 
     @classmethod
     def identity(cls):
-        return cls(torch.eye(3))
+        return cls(Rotation.identity(), torch.zeros(3))
 
     def apply(self, x: torch.Tensor) -> torch.Tensor:
         R = self.rotation.apply(x)
@@ -158,3 +159,30 @@ class Rigid:
 
         return Rigid(rotation=rot, translation=trans)
 
+
+    @classmethod
+    def from_list(cls, rigids_list: list[Rigid]):
+        max_len = max([ r.translation.shape[0] for r in rigids_list])
+        translations = torch.stack([ r.translation for r in rigids_list])
+        rotations = torch.stack([ r.rotation.matrix for r in rigids_list])
+
+        new_rigid = cls(rotation=Rotation(rotations), translation=translations)
+
+        return new_rigid
+
+
+    def to_list(self) -> list[Rigid]:
+        return [ Rigid(Rotation(self.rotation.matrix[i]), self.translation[i]) for i in range(self.translation.shape[0]) ]
+
+
+    def _extend(self, max_len):
+        len_ = self.translation.shape[0]
+        gap = max_len - len_
+
+        if gap > 0:
+            pad_rigid = Rigid.identity()
+            pad_rigids = [pad_rigid] * gap
+            rigids_list = self.to_list() + pad_rigids
+            return Rigid.from_list(rigids_list)
+        else:
+            return self

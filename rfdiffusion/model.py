@@ -14,11 +14,13 @@ class RFDiffusion(nn.Module):
         self.diffuser = Diffuser(timesteps=200)
 
 
-    def forward(self, batch, mask):
-        single, pair = self.input_embedder(batch)
-        rigids = None
+    def forward(self, tokens, mask, rigids):
+        single, pair = self.input_embedder(tokens)
+        
         for _ in range(self.trunks):
             single, pair, rigids = self.trunk(single, pair, rigids, mask)
+
+        #print("Rendrez", single.shape, rigids.translation.shape)
         
         #xt, noise = self.diffuser(x0=rigids)
         return 
