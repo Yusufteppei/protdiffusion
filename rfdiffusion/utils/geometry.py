@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+import matplotlib.pyplot as plt
 ## CONSTANTS
 
 # Bond lengths (Å)
@@ -176,3 +177,34 @@ def build_residue_backbone(
 
     return torch.stack([n_next, ca_next, c_next])
 
+
+
+
+def plot_protein(rigids, mask=None, protein_idx=0):
+    coords = rigids.translation[protein_idx].detach().cpu()
+
+    if mask is not None:
+        coords = coords[mask[protein_idx].cpu()]
+
+    xyz = coords.numpy()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+
+    ax.plot(
+        xyz[:, 0],
+        xyz[:, 1],
+        xyz[:, 2],
+    )
+
+    ax.scatter(
+        xyz[:, 0],
+        xyz[:, 1],
+        xyz[:, 2],
+    )
+
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+
+    plt.show()
