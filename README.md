@@ -1,258 +1,195 @@
-# RFdiffusion — Independent PyTorch Implementation
+# prot-diffusion
 
-An independent PyTorch implementation of the core ideas behind **RFdiffusion**, a diffusion-based generative model for protein structure design.
+A research-oriented implementation of **geometric diffusion models for protein structure generation**.
 
-The goal of this project is not simply to use an existing implementation, but to reconstruct the underlying architecture and geometric reasoning from the literature and reference implementations.
+This project began as an implementation/reconstruction of ideas from **RFdiffusion**, with the goal of understanding the underlying machinery rather than treating the model as a black box. It is now evolving toward experimenting with alternative formulations of protein diffusion, particularly diffusion directly over protein backbone geometry.
 
-> **Status: Work in Progress**
+## Motivation
 
----
-
-## Overview
-
-RFdiffusion combines protein structure representations, invariant geometric reasoning, and iterative denoising to generate protein structures.
-
-This implementation is being built from the architectural components upward, with particular attention to the interaction between:
-
-* Protein sequence representations
-* Single and pair representations
-* Rigid-body transformations
-* Invariant Point Attention (IPA)
-* Repeated trunk refinement
-* Diffusion-based structure generation
-
-The current model follows the high-level structure:
-
-```text
-Input
- │
- ├── Single representation
- └── Pair representation
-          │
-          ▼
-   Input Embedding
-          │
-          ▼
-     ┌───────────┐
-     │   Trunk    │
-     │            │
-     │    IPA     │
-     │     ↓      │
-     │  Rigid     │
-     │  updates   │
-     └───────────┘
-          │
-          ▼
-   Repeated refinement
-          │
-          ▼
- Protein structure
-```
-
-The trunk is applied iteratively, allowing the model to progressively refine the structural representation.
-
----
-
-## Current Implementation
-
-The current top-level model is structured around repeated trunk passes:
-
-```python
-class RFDiffusion(nn.Module):
-    def __init__(self, trunks):
-        super().__init__()
-
-        self.trunks = trunks
-        self.input_embedder = InputEmbedder()
-        self.trunk = Trunk()
-
-    def forward(self, batch, mask):
-        single, pair = self.input_embedder(batch)
-
-        rigids = None
-
-        for _ in range(self.trunks):
-            rigids = self.trunk(single, pair, rigids)
-```
-
-The important architectural idea here is that the **rigid representation is progressively refined through repeated trunk iterations**.
-
----
-
-## Components
-
-### Input Embedding
-
-The input embedder produces the model's initial:
-
-* Single representation
-* Pair representation
-
-These representations provide the feature space on which the trunk operates.
-
-### Rigid Geometry
-
-Protein structure is represented using rigid transformations consisting of:
+Protein structures are naturally geometric objects. A backbone residue can be represented by a rigid transformation:
 
 [
-T = (R, t)
+T_i = (R_i, t_i)
 ]
 
 where:
 
-* (R) is a 3D rotation
-* (t) is a 3D translation
+* (R_i \in SO(3)) represents orientation
+* (t_i \in \mathbb{R}^3) represents translation
 
-This provides a natural representation for residue-local coordinate frames.
+This makes protein generation fundamentally different from ordinary diffusion over Euclidean vectors or images.
 
-### Invariant Point Attention
+The goal of `prot-diffusion` is to explore how diffusion models can operate directly on these geometric representations while preserving the relevant symmetries and structure of proteins.
 
-IPA provides the geometric attention mechanism used by the trunk.
+## Current direction
 
-Unlike conventional attention, IPA combines:
+The project currently explores:
 
-* Scalar attention
-* Point-based attention
-* Pairwise information
+* Protein backbone representation using rigid frames
+* Rotation and translation geometry
+* Forward diffusion of protein structures
+* Diffusion timestep embeddings
+* Residue and pair representations
+* Invariant Point Attention (IPA)
+* SE(3)/SO(3) geometric diffusion
+* Noise- and structure-prediction parameterizations
+* Alternative rotational noise processes
+* Equivariant protein structure generation
 
-Point queries and keys are transformed through residue rigid frames, allowing geometric relationships to influence attention while maintaining rotational and translational invariance.
+The implementation is intentionally modular so that different diffusion processes and network architectures can be experimented with independently.
 
-### Trunk
+## Architecture
 
-The trunk repeatedly processes the single and pair representations while updating the structural rigid representation.
-
-Conceptually:
+The current architecture is inspired by modern protein structure models and diffusion systems:
 
 ```text
-(single, pair, rigid_0)
-          │
-          ▼
-        Trunk
-          │
-          ▼
-        rigid_1
-          │
-          ▼
-        Trunk
-          │
-          ▼
-        rigid_2
-          │
-          ▼
-          ...
+Protein sequence
+       │
+       ▼
+ Input Embedding
+       │
+       ├───────────────┐
+       │               │
+       ▼               ▼
+   Single            Pair
+representation   representation
+       │               │
+       └───────┬───────┘
+               │
+               ▼
+          Diffusion
+          timestep
+               │
+               ▼
+             Trunk
+               │
+        ┌──────┴──────┐
+        │             │
+       IPA        Transitions
+        │             │
+        └──────┬──────┘
+               │
+               ▼
+      Structure prediction
+               │
+               ▼
+       Denoised protein
 ```
 
-This iterative refinement is a central part of the architecture being reconstructed.
-
----
+The architecture is still under active development and is not intended to be a strict reproduction of RFdiffusion.
 
 ## Geometry
 
-The implementation includes explicit geometric operations rather than treating protein coordinates as ordinary unconstrained vectors.
+Backbone residues are represented using rigid transformations:
 
-Current geometric work includes:
+[
+T_i =
+\begin{bmatrix}
+R_i & t_i \
+0 & 1
+\end{bmatrix}
+]
 
-* Rotation representations
-* Rigid transformations
-* Local ↔ global coordinate transformations
-* Protein residue frames
-* Backbone geometry
-* Dihedral-angle calculations
-* Atom placement
-* Torsion-based structural reconstruction
+with rotations represented on (SO(3)).
 
-The intention is to maintain a clear separation between **learned representations** and **physical/geometric transformations**.
+This allows operations such as:
 
----
+```python
+x_rotated = rotation.apply(x)
+x_transformed = rigid.apply(x)
+```
+
+rather than treating orientations as unconstrained matrices.
 
 ## Diffusion
 
-The diffusion component is currently under active development.
+The project is investigating diffusion processes over both translational and rotational components.
 
-The intended generative process is:
+For translations, the standard Gaussian formulation is straightforward:
 
-```text
-Clean protein structure
-        │
-        ▼
-   Forward diffusion
-        │
-        ▼
-     Noisy state
-        │
-        ▼
-   Neural denoiser
-        │
-        ▼
-   Less noisy state
-        │
-        ▼
-      Repeat
-        │
-        ▼
- Generated structure
-```
+[
+x_t =
+\sqrt{\bar{\alpha}_t}x_0 +
+\sqrt{1-\bar{\alpha}_t}\epsilon
+]
 
-The final system will use iterative denoising to transform noisy structural states into coherent protein structures.
+with
 
----
+[
+\epsilon \sim \mathcal{N}(0,I).
+]
 
-## Design Philosophy
+Rotational diffusion requires additional geometric treatment because rotations live on (SO(3)), rather than (\mathbb{R}^3).
 
-This project is primarily an **implementation and learning exercise**.
+One direction being investigated is representing small rotational perturbations in the tangent space:
 
-Rather than treating RFdiffusion as a black-box model, the implementation focuses on understanding and reconstructing the mechanisms that make geometric protein generation possible.
+[
+\delta\omega \sim \mathcal{N}(0,\sigma_t^2I)
+]
 
-Particular emphasis is placed on:
+and mapping them onto (SO(3)) through the exponential map:
 
-1. Understanding the mathematical representation of protein geometry.
-2. Implementing rigid-body transformations explicitly.
-3. Understanding how IPA combines scalar and geometric attention.
-4. Understanding how trunk iterations progressively refine structure.
-5. Integrating these components with diffusion-based generation.
+[
+R_{t+1}
+=======
 
----
+\exp([\delta\omega]_\times)R_t.
+]
 
-## Project Status
+The appropriate noise schedule and terminal distribution are subjects of experimentation.
 
-### Implemented / Under active development
+## Inspirations
 
-* [x] PyTorch model structure
-* [x] Single/pair input embedding interface
-* [x] Rotation and rigid-body representations
-* [x] Local/global coordinate transformations
-* [x] Protein geometric representation
-* [x] Backbone geometry
-* [x] Dihedral-angle calculations
-* [x] Atom placement / structural reconstruction utilities
-* [x] Trunk interface
-* [ ] Complete IPA validation
-* [ ] Complete diffusion process
-* [ ] Reverse diffusion / sampling
-* [ ] End-to-end structure generation
+The project draws heavily from existing work in protein structure prediction and geometric diffusion, including:
+
+* RFdiffusion
+* FrameDiff
+* AlphaFold / RoseTTAFold-style geometric representations
+* Diffusion models on (SO(3)) and (SE(3))
+* Invariant Point Attention
+* Equivariant neural networks
+
+The objective is not to reproduce any single model indefinitely, but to understand these methods deeply enough to experiment with alternative formulations.
+
+## Status
+
+🚧 **Research / experimental**
+
+The implementation is incomplete and APIs are expected to change.
+
+Current work is focused on:
+
+* [ ] Complete geometric diffusion process
+* [ ] Rotational diffusion
+* [ ] Noise/structure prediction formulation
 * [ ] Training objective
-* [ ] Quantitative validation against RFdiffusion
-* [ ] Generated-structure evaluation
+* [ ] Full denoising sampler
+* [ ] Protein backbone generation
+* [ ] Structural evaluation
+* [ ] Comparison against existing protein diffusion approaches
 
-The implementation should therefore **not currently be considered a reproduction of the official RFdiffusion model or a production-ready protein design system**.
+## Project philosophy
 
----
+`prot-diffusion` is primarily a **learning and research project**.
+
+Rather than simply reproducing an existing architecture, the aim is to understand:
+
+> **What is the simplest and most principled way to perform generative diffusion directly over protein geometry?**
+
+That means existing methods are treated as starting points rather than fixed constraints.
 
 ## References
 
-This project is based primarily on the ideas presented in:
+Key references include:
 
-* Watson et al., *De novo design of protein structure and function with RFdiffusion*
-* Jumper et al., *Highly accurate protein structure prediction with AlphaFold*
-* The RFdiffusion reference implementation
+* RFdiffusion
+* FrameDiff
+* Diffusion models on (SO(3))
+* AlphaFold
+* Invariant Point Attention
 
-The project is intended as an independent implementation for understanding and experimentation.
+More detailed references will be added as individual components are implemented.
 
----
+## License
 
-## Disclaimer
-
-This repository is an independent implementation and is **not affiliated with or endorsed by the original RFdiffusion authors**.
-
-Implementation details may differ from the reference implementation, and the project should not be expected to reproduce its performance until the relevant components have been fully implemented and validated.
-
+License information will be added as the project matures.
