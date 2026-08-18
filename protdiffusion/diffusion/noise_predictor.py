@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from protdiffusiondiffusion import TimeEmbedding
-from protdiffusiongeometry import Rigid, Rotation
+from protdiffusion.diffusion import TimeEmbedding
+from protdiffusion.geometry import Rigid, Rotation
 
 
 class NoisePredictor(nn.Module):

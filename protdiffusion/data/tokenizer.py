@@ -1,5 +1,5 @@
 import torch
-from protdiffusiononfig import amino_acids
+from protdiffusion.config import amino_acids
 
 
 class ProteinTokenizer:

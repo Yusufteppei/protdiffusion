@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from protdiffusiondiffusion import TranslationDiffuser, RotationDiffuser
-from protdiffusiongeometry import Rigid
+from protdiffusion.diffusion import TranslationDiffuser, RotationDiffuser
+from protdiffusion.geometry import Rigid
 
 
 class Diffuser(nn.Module):

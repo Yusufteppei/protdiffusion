@@ -1,6 +1,6 @@
 from __future__ import annotations
 import torch
-from protdiffusionutils import normalize
+from protdiffusion.utils import normalize
 
 
 class Rotation:

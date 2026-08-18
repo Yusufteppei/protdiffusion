@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader, Dataset
-from protdiffusiondata import Protein, ProteinTokenizer
+from protdiffusion.data import Protein, ProteinTokenizer
 import torch 
-from protdiffusiongeometry import Rigid
+from protdiffusion.geometry import Rigid
 
 
 tokenizer = ProteinTokenizer()

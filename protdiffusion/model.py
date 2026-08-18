@@ -1,7 +1,7 @@
 import torch 
 import torch.nn as nn
-from protdiffusionmodules import InputEmbedder, Trunk
-from protdiffusiondiffusion import Diffuser, NoisePredictor
+from protdiffusion.modules import InputEmbedder, Trunk
+from protdiffusion.diffusion import Diffuser, NoisePredictor
 
 
 class RFDiffusion(nn.Module):
