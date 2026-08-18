@@ -8,20 +8,20 @@ This project began as an implementation/reconstruction of ideas from **RFdiffusi
 
 Protein structures are naturally geometric objects. A backbone residue can be represented by a rigid transformation:
 
-[
+$$
 T_i = (R_i, t_i)
-]
+$$
 
 where:
 
-* (R_i \in SO(3)) represents orientation
-* (t_i \in \mathbb{R}^3) represents translation
+* $R_i \in SO(3)$ represents orientation
+* $t_i \in \mathbb{R}^3$ represents translation
 
 This makes protein generation fundamentally different from ordinary diffusion over Euclidean vectors or images.
 
 The goal of `prot-diffusion` is to explore how diffusion models can operate directly on these geometric representations while preserving the relevant symmetries and structure of proteins.
 
-## Current direction
+## Current Direction
 
 The project currently explores:
 
@@ -31,7 +31,7 @@ The project currently explores:
 * Diffusion timestep embeddings
 * Residue and pair representations
 * Invariant Point Attention (IPA)
-* SE(3)/SO(3) geometric diffusion
+* $SE(3)$ / $SO(3)$ geometric diffusion
 * Noise- and structure-prediction parameterizations
 * Alternative rotational noise processes
 * Equivariant protein structure generation
@@ -82,15 +82,15 @@ The architecture is still under active development and is not intended to be a s
 
 Backbone residues are represented using rigid transformations:
 
-[
+$$
 T_i =
 \begin{bmatrix}
 R_i & t_i \
 0 & 1
 \end{bmatrix}
-]
+$$
 
-with rotations represented on (SO(3)).
+with rotations represented on $SO(3)$.
 
 This allows operations such as:
 
@@ -107,34 +107,34 @@ The project is investigating diffusion processes over both translational and rot
 
 For translations, the standard Gaussian formulation is straightforward:
 
-[
+$$
 x_t =
 \sqrt{\bar{\alpha}_t}x_0 +
 \sqrt{1-\bar{\alpha}_t}\epsilon
-]
+$$
 
 with
 
-[
+$$
 \epsilon \sim \mathcal{N}(0,I).
-]
+$$
 
-Rotational diffusion requires additional geometric treatment because rotations live on (SO(3)), rather than (\mathbb{R}^3).
+Rotational diffusion requires additional geometric treatment because rotations live on $SO(3)$ rather than $\mathbb{R}^3$.
 
 One direction being investigated is representing small rotational perturbations in the tangent space:
 
-[
-\delta\omega \sim \mathcal{N}(0,\sigma_t^2I)
-]
+$$
+\delta\omega \sim \mathcal{N}(0,\sigma_t^2 I)
+$$
 
-and mapping them onto (SO(3)) through the exponential map:
+and mapping them onto $SO(3)$ through the exponential map:
 
-[
+$$
 R_{t+1}
 =======
 
 \exp([\delta\omega]_\times)R_t.
-]
+$$
 
 The appropriate noise schedule and terminal distribution are subjects of experimentation.
 
@@ -145,7 +145,7 @@ The project draws heavily from existing work in protein structure prediction and
 * RFdiffusion
 * FrameDiff
 * AlphaFold / RoseTTAFold-style geometric representations
-* Diffusion models on (SO(3)) and (SE(3))
+* Diffusion models on $SO(3)$ and $SE(3)$
 * Invariant Point Attention
 * Equivariant neural networks
 
@@ -168,7 +168,7 @@ Current work is focused on:
 * [ ] Structural evaluation
 * [ ] Comparison against existing protein diffusion approaches
 
-## Project philosophy
+## Project Philosophy
 
 `prot-diffusion` is primarily a **learning and research project**.
 
@@ -176,7 +176,7 @@ Rather than simply reproducing an existing architecture, the aim is to understan
 
 > **What is the simplest and most principled way to perform generative diffusion directly over protein geometry?**
 
-That means existing methods are treated as starting points rather than fixed constraints.
+Existing methods are therefore treated as starting points rather than fixed constraints.
 
 ## References
 
@@ -184,7 +184,7 @@ Key references include:
 
 * RFdiffusion
 * FrameDiff
-* Diffusion models on (SO(3))
+* Diffusion models on $SO(3)$
 * AlphaFold
 * Invariant Point Attention
 
