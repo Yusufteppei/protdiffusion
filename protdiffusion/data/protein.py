@@ -1,6 +1,6 @@
 from __future__ import annotations
 import torch
-from rfdiffusion.geometry import Rigid
+from protdiffusion.geometry import Rigid
 import shutil
 from Bio.PDB import PDBParser, PDBList
 from Bio.PDB.Structure import Structure

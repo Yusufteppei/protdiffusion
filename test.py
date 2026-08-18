@@ -1,6 +1,6 @@
 import torch
-from rfdiffusion.utils import dihedral, place_atom
-from rfdiffusion.data import Protein, load_pdb
+from protdiffusion.utils import dihedral, place_atom
+from protdiffusion.data import Protein, load_pdb
 
 p = load_pdb("datasets/1UBQ.pdb")
 

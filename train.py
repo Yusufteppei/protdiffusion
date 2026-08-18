@@ -1,16 +1,14 @@
 import torch
-from rfdiffusion.model import RFDiffusion
-from rfdiffusion.data import Protein, ProteinDataset
-from rfdiffusion.data.tokenizer import ProteinTokenizer
+from protdiffusion.model import RFDiffusion
+from protdiffusion.data import Protein, ProteinDataset
+from protdiffusion.data.tokenizer import ProteinTokenizer
 from torch.utils.data import DataLoader
-from rfdiffusion.geometry import Rigid, Rotation
+from protdiffusion.geometry import Rigid, Rotation
+from protdiffusion.config import device
 
 
 
 tokenizer = ProteinTokenizer()
-model = RFDiffusion(trunks=10)
-model.train()
-epochs = 20
 
 ##TOO LARGE "1GB1","1AON",
 codes = [
@@ -23,53 +21,21 @@ prots = Protein.from_codes(codes[:10])
 #print([{c: p.__len__()} for c, p in zip(codes,prots)])
 dataset = ProteinDataset(proteins=prots)
 
-def collate_fn(batch):
-    tokens = [ i[0] for i in batch ]
-    protein_rigids = [ i[1] for i in batch ]
-
-    lengths = torch.tensor(
-        [len(x) for x in tokens],
-        dtype=torch.long
-    )
-
-    max_len = lengths.max().item()
-    protein_rigids = [ pr._extend(max_len) for pr in protein_rigids ]
-    rigids = Rigid.from_list(protein_rigids)
-
-    print("Rigid de Finale", rigids.rotation.matrix.shape)
-
-    batch = torch.full(
-        (len(tokens), max_len),
-        tokenizer.pad_id,
-        dtype=torch.long
-    )
-
-
-    mask = torch.zeros(
-        (len(tokens), max_len),
-        dtype=torch.bool
-    )
-
-    for i, token in enumerate(tokens):
-        L = len(token)
-        batch[i, :L] = token
-        mask[i, :L] = True
-        
-
-    return batch, rigids, mask
-
-
-
 data_loader = DataLoader(
     dataset=dataset,
-    batch_size=5,
-    collate_fn=collate_fn
+    batch_size=3,
+    collate_fn=ProteinDataset.collate_fn
 )
+model = RFDiffusion(trunks=10, max_residues=600)
+model.train()
+print(model)
+epochs = 2
 
-
-for tokens, rigids, mask in data_loader:
-    
-    
-    out = model(tokens=tokens, mask=mask, rigids=rigids)
-
-print(out)
+for epoch in range(epochs):
+    for tokens, rigids, mask, max_residues in data_loader:
+        B, L = tokens.shape
+        T = torch.randint(model.diffuser.num_timesteps, (B, ))
+        xt, noise, noise_pred = model(tokens=tokens, mask=mask, rigids=rigids, timestep=T)
+        print(noise)
+        
+    print(f"Epoch {epoch+1}")

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from rfdiffusion.config import d_pair, d_res, n_res
+from protdiffusionconfig import d_pair, d_res, n_res
 import math
 
 

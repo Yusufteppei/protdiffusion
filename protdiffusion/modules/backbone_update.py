@@ -1,5 +1,5 @@
 import torch.nn as nn
-from rfdiffusion.config import d_res
+from protdiffusion.config import d_res
 
 class BackboneUpdate(nn.Module):
     def __init__(self):

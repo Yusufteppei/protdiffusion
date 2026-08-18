@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader, Dataset
-from rfdiffusion.data import Protein, ProteinTokenizer
+from protdiffusiondata import Protein, ProteinTokenizer
 import torch 
-from rfdiffusion.geometry import Rigid
+from protdiffusiongeometry import Rigid
 
 
 tokenizer = ProteinTokenizer()
@@ -52,7 +52,7 @@ class ProteinDataset(Dataset):
             mask[i, :L] = True
             
 
-        return batch, rigids, mask
+        return batch, rigids, mask, max_len
 
 
     def __len__(self):

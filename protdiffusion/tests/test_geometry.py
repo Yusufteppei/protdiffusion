@@ -1,10 +1,10 @@
 import math
 import torch
-from rfdiffusion.data import load_pdb
-from rfdiffusion.utils import (
+from protdiffusion.data import load_pdb
+from protdiffusion.utils import (
     dihedral, place_atom, build_residue_backbone
 )
-from rfdiffusion.utils.geometry import (
+from protdiffusion.utils.geometry import (
     C_N,
     C_N_CA,
     N_CA,

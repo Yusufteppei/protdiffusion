@@ -1,6 +1,6 @@
 from __future__ import annotations
 import torch
-from rfdiffusion.utils import normalize
+from protdiffusionutils import normalize
 
 
 class Rotation:

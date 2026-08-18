@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from rfdiffusion.modules import InvariantPointAttention, IPATransition, BackboneUpdate
-from rfdiffusion.geometry import Rigid, Rotation
-from rfdiffusion.config import d_res
+from protdiffusion.modules import InvariantPointAttention, IPATransition, BackboneUpdate
+from protdiffusion.geometry import Rigid, Rotation
+from protdiffusion.config import d_res
 
 
 class Trunk(nn.Module):

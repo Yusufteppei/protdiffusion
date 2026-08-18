@@ -3,9 +3,9 @@
 import torch
 import pytest
 
-from rfdiffusion.config import d_pair, d_res, device
-from rfdiffusion.modules import InvariantPointAttention
-from rfdiffusion.geometry import Rigid, Rotation
+from protdiffusion.config import d_pair, d_res, device
+from protdiffusion.modules import InvariantPointAttention
+from protdiffusion.geometry import Rigid, Rotation
 
 
 # ------------------------------------------------------------
