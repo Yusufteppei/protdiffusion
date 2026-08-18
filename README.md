@@ -129,11 +129,7 @@ $$
 
 and mapping them onto $SO(3)$ through the exponential map:
 
-$$
-R_{t+1}
-
-\exp([\delta\omega]_\times)R_t.
-$$
+$$R_{t+1} = \exp([\delta\omega]_\times)R_t$$
 
 The appropriate noise schedule and terminal distribution are subjects of experimentation.
 
