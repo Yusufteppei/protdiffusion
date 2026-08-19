@@ -36,6 +36,6 @@ for epoch in range(epochs):
         B, L = tokens.shape
         T = torch.randint(model.diffuser.num_timesteps, (B, ))
         xt, noise, noise_pred = model(tokens=tokens, mask=mask, rigids=rigids, timestep=T)
-        print(noise_pred)
+        #print(noise_pred.translation, noise.translation)
         
     print(f"Epoch {epoch+1}")
