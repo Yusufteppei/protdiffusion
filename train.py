@@ -23,12 +23,12 @@ dataset = ProteinDataset(proteins=prots)
 
 data_loader = DataLoader(
     dataset=dataset,
-    batch_size=3,
+    batch_size=4,
     collate_fn=ProteinDataset.collate_fn
 )
 model = RFDiffusion(trunks=10, max_residues=600)
 model.train()
-print(model)
+#print(model)
 epochs = 2
 
 for epoch in range(epochs):
@@ -36,6 +36,6 @@ for epoch in range(epochs):
         B, L = tokens.shape
         T = torch.randint(model.diffuser.num_timesteps, (B, ))
         xt, noise, noise_pred = model(tokens=tokens, mask=mask, rigids=rigids, timestep=T)
-        print(noise)
+        print(noise_pred)
         
     print(f"Epoch {epoch+1}")

@@ -5,6 +5,7 @@ import shutil
 from Bio.PDB import PDBParser, PDBList
 from Bio.PDB.Structure import Structure
 from Bio.SeqUtils import seq1
+from protdiffusion.config import protein_pdb_path
 
 pdbl = PDBList()
 parser = PDBParser(QUIET=True)
@@ -105,12 +106,12 @@ class Protein:
     def load_pdb(cls, code="1UBQ")-> Protein:
         ## Deprecate the path
         try:
-            structure = parser.get_structure("protein", f"proteins/{code}.pdb")
+            structure = parser.get_structure("protein", f"{protein_pdb_path}/{code}.pdb")
         except:
             path = pdbl.retrieve_pdb_file(code, pdir="proteins", file_format="pdb", obsolete=False)
             shutil.move(path, f"proteins/{code}.pdb")
             
-            structure = parser.get_structure("protein", f"proteins/{code}.pdb")
+            structure = parser.get_structure("protein", f"{protein_pdb_path}/{code}.pdb")
 
         #seq = get_sequence(structure)
         #coords = get_coords(structure)

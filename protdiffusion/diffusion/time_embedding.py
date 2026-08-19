@@ -1,11 +1,15 @@
 import torch
 import torch.nn as nn
 import math
+from protdiffusion.config import d_time, max_period, d_res
+
 
 class TimeEmbedding(nn.Module):
 
-    def __init__(self, d_time=128, max_period=10000):
+    def __init__(self, d_time=d_time, max_period=max_period):
         super().__init__()
+
+        assert d_time % 2 == 0, "d_time must be even"
 
         self.d_time = d_time
 
@@ -17,6 +21,8 @@ class TimeEmbedding(nn.Module):
         )
 
         self.register_buffer("frequencies", frequencies)
+        self.translation_proj = nn.Linear(d_time, 3)
+        self.rotation_proj = nn.Linear(d_time, 3)
 
     def forward(self, timestep):
         """
@@ -30,6 +36,9 @@ class TimeEmbedding(nn.Module):
 
         args = timestep[:, None] * self.frequencies[None, :]
 
+        #print(f"FREQ: {self.frequencies}")
+        #print("ARGS", args)
+
         embedding = torch.cat(
             [
                 torch.sin(args),
@@ -38,4 +47,6 @@ class TimeEmbedding(nn.Module):
             dim=-1
         )
 
-        return embedding
+        rotation_time, translation_time = self.rotation_proj(embedding), self.translation_proj(embedding)
+
+        return rotation_time, translation_time 
