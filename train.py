@@ -36,6 +36,13 @@ for epoch in range(epochs):
         B, L = tokens.shape
         T = torch.randint(model.diffuser.num_timesteps, (B, ))
         xt, noise, noise_pred = model(tokens=tokens, mask=mask, rigids=rigids, timestep=T)
-        #print(noise_pred.translation, noise.translation)
+
+        """
+            print("Noise Determinant: ", torch.linalg.det(noise_pred.rotation.matrix))
+            orthogonality_error = torch.max(
+                torch.abs(noise_pred.rotation.matrix.transpose(-1, -2) @ noise_pred.rotation.matrix - torch.eye(3, device=device))
+            )
+            print("Orthogonality Error: ", orthogonality_error)
+        """
         
     print(f"Epoch {epoch+1}")
