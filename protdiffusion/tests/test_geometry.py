@@ -164,7 +164,7 @@ def test_backbone_torsions():
 
 
 def test_backbone_reconstruction_from_pdb():
-    p = load_pdb("datasets/1UBQ.pdb")
+    p = load_pdb()
 
     residue_i = p.coords[0]
     residue_next = p.coords[1]
