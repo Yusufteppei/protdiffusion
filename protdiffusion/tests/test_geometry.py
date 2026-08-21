@@ -1,6 +1,6 @@
 import math
 import torch
-from protdiffusion.data import load_pdb
+from protdiffusion.data import Protein
 from protdiffusion.utils import (
     dihedral, place_atom, build_residue_backbone
 )
@@ -12,7 +12,7 @@ from protdiffusion.utils.geometry import (
     CA_C,
 )
     
-
+load_pdb = Protein.load_pdb
 DTYPE = torch.float32
 ATOL = 1e-5
 
