@@ -17,11 +17,11 @@ class ProtDiffusion(nn.Module):
 
     def forward(self, tokens, mask, rigids, timestep) -> tuple[Rigid, Rigid]:
         single, pair = self.input_embedder(tokens)
-        xt, noise_t = self.diffuser(x0=rigids, timestep=timestep)
+        rigids_t, noise_t = self.diffuser(x0=rigids, timestep=timestep)
         
         for _ in range(self.trunks):
-            single, pair, rigids = self.trunk(single, pair, rigids, mask)
+            single, pair, rigids_t = self.trunk(single, pair, rigids=rigids_t, mask=mask)
         
-        noise_pred = self.noise_predictor(xt, timestep)
+        noise_pred = self.noise_predictor(rigids_t, timestep)
 
         return noise_t, noise_pred
