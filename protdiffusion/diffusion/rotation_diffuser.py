@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from protdiffusion.geometry import Rotation
+from protdiffusion.geometry import Rotation, RotationVector
 
 
 class RotationDiffuser(nn.Module):
@@ -14,7 +14,8 @@ class RotationDiffuser(nn.Module):
         self.register_buffer("sigma", sigma)
 
 
-    def forward(self, R0: Rotation, timestep, noise=None):
+    def forward(self, R0: Rotation, timestep: int, 
+                noise: torch.Tensor =None) -> tuple[Rotation, RotationVector]:
         """
         R0:       (..., 3, 3)
         timestep: (B,)
@@ -60,6 +61,7 @@ class RotationDiffuser(nn.Module):
         R_noise = torch.matrix_exp(K)
 
         # Compose the noise rotation with the original rotation.
-        Rt = R_noise @ R0.matrix
-
-        return Rotation(Rt), Rotation(noise)
+        Rt = torch.matmul(R_noise, R0.matrix)
+        
+        
+        return Rotation(Rt), RotationVector(noise)

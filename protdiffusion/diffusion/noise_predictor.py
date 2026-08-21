@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 from protdiffusion.diffusion import TimeEmbedding
-from protdiffusion.geometry import Rigid, Rotation
-from protdiffusion.config import d_res
+from protdiffusion.geometry import Rigid, RotationVector
 
 
 class NoisePredictor(nn.Module):
@@ -11,6 +10,7 @@ class NoisePredictor(nn.Module):
         super().__init__()
 
         self.time_embedding = TimeEmbedding(128)
+
         self.translation_net = nn.Sequential(
             nn.Linear(6, 9),
             nn.GELU(),
@@ -18,27 +18,57 @@ class NoisePredictor(nn.Module):
             nn.GELU(),
             nn.Linear(6, 3)
         )
+
         self.rotation_net = nn.Sequential(
-            nn.Linear(3, 6),
+            nn.Linear(12, 12),
+            nn.GELU(),
+            nn.Linear(12, 6),
             nn.GELU(),
             nn.Linear(6, 3)
         )
 
-    def forward(self, xt, timestep):
+    def forward(self, xt, timestep) -> Rigid:
 
         rotation_time, translation_time = self.time_embedding(timestep)
 
-        #rotation_noise = self.rotation_net(xt.rotation.matrix) + rotation_time[:, None, :])
+        B, L = xt.translation.shape[:2]
 
-        time = translation_time[:, None, :].expand(
-            -1, xt.translation.shape[1], -1
+        # -------------------------
+        # Translation noise
+        # -------------------------
+
+        translation_time = translation_time[:, None, :].expand(
+            -1, L, -1
         )
-        x = torch.cat([xt.translation, time], dim=-1)
-        
 
-        print(x.shape)
-        translation_noise = self.translation_net(x)
+        translation_input = torch.cat(
+            [xt.translation, translation_time],
+            dim=-1
+        )
 
-        noise = Rigid(rotation=Rotation.identity(), translation=translation_noise)
+        translation_noise = self.translation_net(
+            translation_input
+        )
 
-        return noise
+        # -------------------------
+        # Rotation noise
+        # -------------------------
+
+        rotation = xt.rotation.matrix.reshape(
+            B, L, 9
+        )
+
+        rotation_time = rotation_time[:, None, :].expand(
+            -1, L, -1
+        )
+
+        rotation_input = torch.cat(
+            [rotation, rotation_time],
+            dim=-1
+        )
+
+        rotation_noise = self.rotation_net(
+            rotation_input
+        )
+
+        return Rigid(rotation_vector=RotationVector(rotation_noise), translation=translation_noise)

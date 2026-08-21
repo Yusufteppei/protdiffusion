@@ -14,27 +14,29 @@ class TranslationDiffuser(nn.Module):
 
         alpha_bar = torch.cumprod(alpha, dim=0)
 
+
         self.register_buffer("beta", beta)
         self.register_buffer("alpha", alpha)
         self.register_buffer("alpha_bar", alpha_bar)
 
 
-    def forward(self, x0, timestep, noise=None):
+    def forward(self, trans_0: torch.Tensor, timestep: int, 
+                noise:torch.Tensor = None) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        x0: (..., 3)
+        trans_0: (..., 3)
         timestep:  (B,)
         """
         if noise is None:
-            noise = torch.randn_like(x0)
+            noise = torch.randn_like(trans_0)
 
         alpha_bar = self.alpha_bar[timestep]
 
-        while alpha_bar.ndim < x0.ndim:
+        while alpha_bar.ndim < trans_0.ndim:
             alpha_bar = alpha_bar.unsqueeze(-1)
 
-        xt = (
-            alpha_bar.sqrt() * x0
+        trans_t = (
+            alpha_bar.sqrt() * trans_0
             + (1.0 - alpha_bar).sqrt() * noise
         )
 
-        return xt, noise
+        return trans_t, noise

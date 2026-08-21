@@ -3,6 +3,36 @@ import torch
 from protdiffusion.utils import normalize
 
 
+class RotationVector:
+    def __init__(self, vector: torch.Tensor):
+        self.vector = vector
+
+    @classmethod
+    def from_rotation(cls, rotation: Rotation):
+        """
+        Convert a rotation matrix to a rotation vector using
+        the SO(3) logarithm map.
+
+        Args:
+            rotation: (..., 3, 3)
+
+        Returns:
+            RotationVector with vector (..., 3)
+        """
+        R = rotation.matrix
+        theta = torch.acos(torch.clamp((torch.diagonal(R, dim1=-2, dim2=-1).sum(-1) - 1) / 2, -1 + 1e-7, 1 - 1e-7))
+        sin_theta = torch.sin(theta)
+
+        # Avoid division by zero for small angles
+        small_angle_mask = sin_theta.abs() < 1e-7
+        sin_theta[small_angle_mask] = 1.0
+
+        log_R = (theta / (2 * sin_theta))[..., None, None] * (R - R.transpose(-1, -2))
+        rotvec = torch.stack([log_R[..., 2, 1], log_R[..., 0, 2], log_R[..., 1, 0]], dim=-1)
+
+        return cls(rotvec)
+
+    
 class Rotation:
     def __init__(self, matrix: torch.Tensor):
         self.matrix = matrix
@@ -96,11 +126,18 @@ class Rotation:
 
 
 class Rigid:
-    def __init__(self, rotation: Rotation, translation: torch.Tensor):
+    def __init__(self, rotation: Rotation = None, translation: torch.Tensor = None, rotation_vector: RotationVector = None):
+        if rotation is None and rotation_vector is not None:
+            rotation = Rotation.from_rotvec(rotation_vector.vector)
+            #print("derived rotation shape", rotation.matrix.shape)
         self.rotation = rotation
+
         self.translation = translation
 
-    
+        if rotation_vector is None and rotation is not None:
+            rotation_vector = RotationVector.from_rotation(rotation)
+        self.rotation_vector = rotation_vector 
+        
     @classmethod
     def from_coords(cls, coords: torch.Tensor):
         """

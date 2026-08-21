@@ -1,11 +1,12 @@
 import torch
-from protdiffusion.model import RFDiffusion
+from protdiffusion.model import ProtDiffusion
 from protdiffusion.data import Protein, ProteinDataset
 from protdiffusion.data.tokenizer import ProteinTokenizer
 from torch.utils.data import DataLoader
 from protdiffusion.geometry import Rigid, Rotation
 from protdiffusion.config import device
-
+from protdiffusion.loss import RigidLoss
+from torch.optim import Adam
 
 
 tokenizer = ProteinTokenizer()
@@ -17,7 +18,7 @@ codes = [
     "1PGB", "1PRB", "1HRC", "1BRS",  "1FAT", "2RN2", "1CHO", "1CDT"
 ]
 
-prots = Protein.from_codes(codes[:10])
+prots = Protein.from_codes(codes)
 #print([{c: p.__len__()} for c, p in zip(codes,prots)])
 dataset = ProteinDataset(proteins=prots)
 
@@ -26,23 +27,25 @@ data_loader = DataLoader(
     batch_size=4,
     collate_fn=ProteinDataset.collate_fn
 )
-model = RFDiffusion(trunks=10, max_residues=600)
+model = ProtDiffusion(trunks=10, max_residues=600)
+criterion = RigidLoss()
+optimizer = Adam(model.parameters(), lr=1e-4)
 model.train()
 #print(model)
-epochs = 2
+epochs = 10
 
 for epoch in range(epochs):
     for tokens, rigids, mask, max_residues in data_loader:
         B, L = tokens.shape
         T = torch.randint(model.diffuser.num_timesteps, (B, ))
-        xt, noise, noise_pred = model(tokens=tokens, mask=mask, rigids=rigids, timestep=T)
+        noise_t, noise_pred = model(tokens=tokens, mask=mask, rigids=rigids, timestep=T)
 
-        """
-            print("Noise Determinant: ", torch.linalg.det(noise_pred.rotation.matrix))
-            orthogonality_error = torch.max(
-                torch.abs(noise_pred.rotation.matrix.transpose(-1, -2) @ noise_pred.rotation.matrix - torch.eye(3, device=device))
-            )
-            print("Orthogonality Error: ", orthogonality_error)
-        """
+        loss = criterion(noise_pred, noise_t, mask)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+
         
-    print(f"Epoch {epoch+1}")
+    print(f"Epoch {epoch+1}: Loss: {loss}")

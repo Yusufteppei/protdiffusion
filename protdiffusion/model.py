@@ -1,10 +1,10 @@
-import torch 
 import torch.nn as nn
 from protdiffusion.modules import InputEmbedder, Trunk
 from protdiffusion.diffusion import Diffuser, NoisePredictor
+from protdiffusion.geometry import Rigid
 
 
-class RFDiffusion(nn.Module):
+class ProtDiffusion(nn.Module):
     def __init__(self, trunks, max_residues=2048):
         super().__init__()
 
@@ -15,13 +15,13 @@ class RFDiffusion(nn.Module):
         self.trunk = Trunk()
         self.noise_predictor = NoisePredictor()
 
-    def forward(self, tokens, mask, rigids, timestep):
+    def forward(self, tokens, mask, rigids, timestep) -> tuple[Rigid, Rigid]:
         single, pair = self.input_embedder(tokens)
-        xt, noise = self.diffuser(x0=rigids, timestep=timestep)
+        xt, noise_t = self.diffuser(x0=rigids, timestep=timestep)
         
         for _ in range(self.trunks):
             single, pair, rigids = self.trunk(single, pair, rigids, mask)
         
         noise_pred = self.noise_predictor(xt, timestep)
 
-        return xt, noise, noise_pred
+        return noise_t, noise_pred
