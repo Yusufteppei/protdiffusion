@@ -12,22 +12,34 @@ class NoisePredictor(nn.Module):
         self.time_embedding = TimeEmbedding(128)
 
         self.translation_net = nn.Sequential(
-            nn.Linear(6, 9),
+            nn.Linear(6, 24),
             nn.GELU(),
-            nn.Linear(9, 6),
+            nn.Linear(24, 18),
             nn.GELU(),
-            nn.Linear(6, 3)
-        )
-
-        self.rotation_net = nn.Sequential(
-            nn.Linear(12, 12),
+            nn.Linear(18, 12),
             nn.GELU(),
             nn.Linear(12, 6),
             nn.GELU(),
             nn.Linear(6, 3)
         )
 
-    def forward(self, xt, timestep) -> Rigid:
+        self.rotation_net = nn.Sequential(
+            nn.Linear(12, 48),
+            nn.GELU(),
+            nn.Linear(48, 36),
+            nn.GELU(),
+            nn.Linear(36, 24),
+            nn.GELU(),
+            nn.Linear(24, 18),
+            nn.GELU(),
+            nn.Linear(18, 12),
+            nn.GELU(),
+            nn.Linear(12, 6),
+            nn.GELU(),
+            nn.Linear(6, 3)
+        )
+
+    def forward(self, xt, timestep, mask=None) -> Rigid:
 
         rotation_time, translation_time = self.time_embedding(timestep)
 

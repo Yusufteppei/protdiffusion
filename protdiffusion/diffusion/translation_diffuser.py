@@ -21,7 +21,7 @@ class TranslationDiffuser(nn.Module):
 
 
     def forward(self, trans_0: torch.Tensor, timestep: int, 
-                noise:torch.Tensor = None) -> tuple[torch.Tensor, torch.Tensor]:
+                noise:torch.Tensor = None, mask=None) -> tuple[torch.Tensor, torch.Tensor]:
         """
         trans_0: (..., 3)
         timestep:  (B,)
@@ -37,6 +37,6 @@ class TranslationDiffuser(nn.Module):
         trans_t = (
             alpha_bar.sqrt() * trans_0
             + (1.0 - alpha_bar).sqrt() * noise
-        )
+        ) * mask.unsqueeze(-1)
 
         return trans_t, noise

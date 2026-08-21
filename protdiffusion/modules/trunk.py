@@ -16,7 +16,8 @@ class Trunk(nn.Module):
 
 
     def forward(self, single, pair, rigids=None, mask=None):
-
+        single = single * mask[..., None]
+        pair = pair * mask[..., None, None]
         B, L, _ = single.shape
         if rigids is None:
             rigids = Rigid(

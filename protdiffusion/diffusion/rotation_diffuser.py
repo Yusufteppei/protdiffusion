@@ -15,7 +15,7 @@ class RotationDiffuser(nn.Module):
 
 
     def forward(self, R0: Rotation, timestep: int, 
-                noise: torch.Tensor =None) -> tuple[Rotation, RotationVector]:
+                noise: torch.Tensor =None, mask=None) -> tuple[Rotation, RotationVector]:
         """
         R0:       (..., 3, 3)
         timestep: (B,)
@@ -61,7 +61,7 @@ class RotationDiffuser(nn.Module):
         R_noise = torch.matrix_exp(K)
 
         # Compose the noise rotation with the original rotation.
-        Rt = torch.matmul(R_noise, R0.matrix)
+        Rt = torch.matmul(R_noise, R0.matrix) * mask.unsqueeze(-1).unsqueeze(-1)
         
         
         return Rotation(Rt), RotationVector(noise)

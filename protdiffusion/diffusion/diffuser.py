@@ -12,11 +12,11 @@ class Diffuser(nn.Module):
         self.translation_diffuser = TranslationDiffuser(num_timesteps=num_timesteps)
         self.rotation_diffuser = RotationDiffuser(num_timesteps=num_timesteps)
 
-    def forward(self, x0: Rigid, timestep) -> tuple[Rigid, Rigid]:
+    def forward(self, x0: Rigid, timestep, mask=None) -> tuple[Rigid, Rigid]:
         x0_r, x0_t = x0.rotation, x0.translation
         
-        xt_tr, noise_tr = self.translation_diffuser(x0_t, timestep)
-        xt_r, noise_r = self.rotation_diffuser(x0_r, timestep)
+        xt_tr, noise_tr = self.translation_diffuser(x0_t, timestep, mask=mask)
+        xt_r, noise_r = self.rotation_diffuser(x0_r, timestep, mask=mask)
 
         xt, noise_t = Rigid(rotation=xt_r, translation=xt_tr), Rigid(rotation_vector=noise_r, translation=noise_tr)
 
