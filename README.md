@@ -1,12 +1,16 @@
 # protdiffusion
 
-A research-oriented implementation of **geometric diffusion models for protein structure generation**.
+A research-oriented PyTorch implementation exploring **geometric diffusion models for protein structure generation**.
 
-This project began as an implementation/reconstruction of ideas from **RFdiffusion**, with the goal of understanding the underlying machinery rather than treating the model as a black box. It is now evolving toward experimenting with alternative formulations of protein diffusion, particularly diffusion directly over protein backbone geometry.
+The project began as a from-scratch reconstruction of ideas from **RFdiffusion**, with the goal of understanding and implementing the underlying machinery rather than treating existing models as black boxes. It is now evolving into a more experimental project focused on diffusion directly over protein backbone geometry.
+
+> **Status:** Experimental and under active development. This is not a reproduction of the official RFdiffusion implementation.
 
 ## Motivation
 
-Protein structures are naturally geometric objects. A backbone residue can be represented by a rigid transformation:
+Protein structures are fundamentally geometric objects.
+
+A protein backbone can be represented as a collection of residue-level rigid frames:
 
 $$
 T_i = (R_i, t_i)
@@ -14,73 +18,80 @@ $$
 
 where:
 
-* $R_i \in SO(3)$ represents orientation
-* $t_i \in \mathbb{R}^3$ represents translation
+* $R_i \in SO(3)$ represents the orientation of residue $i$
+* $t_i \in \mathbb{R}^3$ represents its position
 
-This makes protein generation fundamentally different from ordinary diffusion over Euclidean vectors or images.
+This makes protein generation different from ordinary diffusion over unconstrained Euclidean vectors or images. Rotations live on the nonlinear manifold $SO(3)$, while translations live in $\mathbb{R}^3$.
 
-The goal of `protdiffusion` is to explore how diffusion models can operate directly on these geometric representations while preserving the relevant symmetries and structure of proteins.
+The goal of `protdiffusion` is to explore how diffusion models can operate directly on these geometric representations while preserving the symmetries and structure relevant to proteins.
 
 ## Current Direction
 
-The project currently explores:
+The project currently includes or explores:
 
-* Protein backbone representation using rigid frames
-* Rotation and translation geometry
-* Forward diffusion of protein structures
+* Protein backbone representation using residue-level rigid frames
+* Rotation and rigid-body geometry
+* $SO(3)$ and $SE(3)$ transformations
+* Translation diffusion
+* Experimental rotational diffusion
 * Diffusion timestep embeddings
 * Residue and pair representations
 * Invariant Point Attention (IPA)
-* $SE(3)$ / $SO(3)$ geometric diffusion
-* Noise- and structure-prediction parameterizations
-* Alternative rotational noise processes
+* Structure and backbone updates
+* Noise prediction parameterizations
+* Geometric loss functions
 * Equivariant protein structure generation
 
-The implementation is intentionally modular so that different diffusion processes and network architectures can be experimented with independently.
+The implementation is intentionally modular so that different geometric representations, diffusion processes, and network architectures can be experimented with independently.
 
 ## Architecture
 
-The current architecture is inspired by modern protein structure models and diffusion systems:
+The current architecture follows the general structure of modern protein geometry networks and diffusion models:
 
 ```text
-Protein sequence
-       │
-       ▼
- Input Embedding
-       │
-       ├───────────────┐
-       │               │
-       ▼               ▼
-   Single            Pair
-representation   representation
-       │               │
-       └───────┬───────┘
-               │
-               ▼
-          Diffusion
-          timestep
-               │
-               ▼
-             Trunk
-               │
-        ┌──────┴──────┐
-        │             │
-       IPA        Transitions
-        │             │
-        └──────┬──────┘
-               │
-               ▼
-      Structure prediction
-               │
-               ▼
-       Denoised protein
+                    Protein sequence
+                           │
+                           ▼
+                    Input Embedding
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+              ▼                         ▼
+       Single representation      Pair representation
+              │                         │
+              └────────────┬────────────┘
+                           │
+                           ▼
+                    Noisy structure
+                         x_t
+                           │
+                           ▼
+                        Trunk
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+              ▼                         ▼
+             IPA                    Transitions
+              │                         │
+              └────────────┬────────────┘
+                           │
+                           ▼
+                  Updated geometric
+                    representation
+                           │
+                           ▼
+                    Noise / structure
+                       prediction
+                           │
+                           ▼
+                    Denoised structure
 ```
 
-The architecture is still under active development and is not intended to be a strict reproduction of RFdiffusion.
+The exact architecture is still evolving and is **not intended to be a strict reproduction of RFdiffusion**.
 
 ## Geometry
 
-Backbone residues are represented using rigid transformations:
+Each residue is represented using a rigid transformation consisting of a rotation and translation:
 
 $$
 T_i =
@@ -90,22 +101,36 @@ R_i & t_i \
 \end{bmatrix}
 $$
 
-with rotations represented on $SO(3)$.
+where:
 
-This allows operations such as:
+$$
+R_i \in SO(3)
+$$
+
+and:
+
+$$
+t_i \in \mathbb{R}^3
+$$
+
+The project implements geometric abstractions for working directly with these transformations:
 
 ```python
 x_rotated = rotation.apply(x)
 x_transformed = rigid.apply(x)
 ```
 
-rather than treating orientations as unconstrained matrices.
+Rather than treating orientation as an unconstrained $3 \times 3$ matrix, rotations are represented and manipulated using geometry-aware operations.
+
+The goal is to make transformations, composition, inversion, and coordinate changes explicit while keeping the underlying implementation compatible with PyTorch autograd.
 
 ## Diffusion
 
-The project is investigating diffusion processes over both translational and rotational components.
+The project investigates diffusion over both translational and rotational components of protein backbone frames.
 
-For translations, the standard Gaussian formulation is straightforward:
+### Translation
+
+Translations can use the standard Gaussian diffusion formulation:
 
 $$
 x_t =
@@ -113,65 +138,131 @@ x_t =
 \sqrt{1-\bar{\alpha}_t}\epsilon
 $$
 
-with
+where:
 
 $$
-\epsilon \sim \mathcal{N}(0,I).
+\epsilon \sim \mathcal{N}(0, I)
 $$
 
-Rotational diffusion requires additional geometric treatment because rotations live on $SO(3)$ rather than $\mathbb{R}^3$.
+The network can then be trained to predict a parameterization of the diffusion process, such as the injected noise or the clean structure.
 
-One direction being investigated is representing small rotational perturbations in the tangent space:
+### Rotation
+
+Rotations require additional treatment because:
 
 $$
-\delta\omega \sim \mathcal{N}(0,\sigma_t^2 I)
+SO(3) \neq \mathbb{R}^3
 $$
 
-and mapping them onto $SO(3)$ through the exponential map:
+A direction currently being explored is sampling perturbations in the tangent space:
 
-$$R_{t+1} = \exp([\delta\omega]_\times)R_t$$
+$$
+\delta\omega \sim \mathcal{N}(0, \sigma_t^2 I)
+$$
 
-The appropriate noise schedule and terminal distribution are subjects of experimentation.
+and mapping them onto the rotation manifold through the exponential map:
 
-## Inspirations
+$$
+R_{t+1}
+=======
 
-The project draws heavily from existing work in protein structure prediction and geometric diffusion, including:
+\exp([\delta\omega]_\times)R_t
+$$
 
-* RFdiffusion
-* FrameDiff
-* AlphaFold / RoseTTAFold-style geometric representations
-* Diffusion models on $SO(3)$ and $SE(3)$
-* Invariant Point Attention
-* Equivariant neural networks
+The appropriate rotational noise process, schedule, target parameterization, and terminal distribution remain active areas of experimentation.
 
-The objective is not to reproduce any single model indefinitely, but to understand these methods deeply enough to experiment with alternative formulations.
+## Training
 
-## Status
+The current training pipeline operates on protein structures represented as batched rigid frames.
 
-🚧 **Research / experimental**
+At a high level:
 
-The implementation is incomplete and APIs are expected to change.
+```text
+Clean protein structure x₀
+            │
+            ▼
+     Geometric diffusion
+            │
+            ▼
+     Noisy structure xₜ
+            │
+            ▼
+    Geometry-aware network
+            │
+            ▼
+ Predicted noise / structure
+            │
+            ▼
+       Geometric loss
+```
 
-Current work is focused on:
+The implementation is currently being validated through small-scale overfitting experiments before scaling to larger protein datasets.
 
-* [ ] Complete geometric diffusion process
-* [ ] Rotational diffusion
-* [ ] Noise/structure prediction formulation
-* [ ] Training objective
-* [ ] Full denoising sampler
+## Project Status
+
+🚧 **Research / Experimental**
+
+The repository is under active development. APIs, representations, and training objectives may change significantly.
+
+Current work includes:
+
+* [x] Protein and backbone geometry
+* [x] Rotation and rigid transformation abstractions
+* [x] Protein structure parsing and residue frames
+* [x] Input embedding
+* [x] Residue and pair representations
+* [x] Invariant Point Attention
+* [x] Geometric trunk and structure updates
+* [x] Translation diffusion
+* [x] Diffusion timestep embeddings
+* [x] Initial noise prediction network
+* [x] Geometric training loss
+* [ ] Stable end-to-end overfitting and training
+* [ ] Principled rotational diffusion on $SO(3)$
+* [ ] Final noise/structure prediction parameterization
+* [ ] Full reverse denoising process
+* [ ] Sampling pipeline
 * [ ] Protein backbone generation
 * [ ] Structural evaluation
-* [ ] Comparison against existing protein diffusion approaches
+* [ ] Comparison with existing geometric protein diffusion approaches
 
 ## Project Philosophy
 
-`protdiffusion` is primarily a **learning and research project**.
+`protdiffusion` is primarily a **learning and research implementation**.
 
-Rather than simply reproducing an existing architecture, the aim is to understand:
+The objective is not simply to reproduce an existing repository layer by layer. Existing architectures are used to understand the design space, after which individual components can be modified or replaced.
+
+The central question motivating the project is:
 
 > **What is the simplest and most principled way to perform generative diffusion directly over protein geometry?**
 
-Existing methods are therefore treated as starting points rather than fixed constraints.
+This means that RFdiffusion, FrameDiff, AlphaFold-style structure modules, and geometric diffusion methods are treated as starting points for investigation rather than fixed architectural constraints.
+
+## Inspirations
+
+The project draws inspiration from work on:
+
+* RFdiffusion
+* FrameDiff
+* AlphaFold
+* RoseTTAFold
+* Invariant Point Attention
+* Diffusion on $SO(3)$ and $SE(3)$
+* Equivariant neural networks
+* Geometric deep learning
+
+## Scope
+
+This repository is currently focused on **understanding and implementing the core geometric and generative machinery**.
+
+It is not currently intended to provide:
+
+* A production-ready protein design system
+* Pretrained models
+* A drop-in replacement for RFdiffusion
+* State-of-the-art protein generation performance
+
+The focus is on building the underlying components from scratch and using them as a platform for experimentation.
 
 ## References
 
@@ -179,12 +270,13 @@ Key references include:
 
 * RFdiffusion
 * FrameDiff
-* Diffusion models on $SO(3)$
 * AlphaFold
+* RoseTTAFold
 * Invariant Point Attention
+* Diffusion models on $SO(3)$ and $SE(3)$
 
-More detailed references will be added as individual components are implemented.
+More detailed paper references and implementation notes will be added as the corresponding components mature.
 
 ## License
 
-License information will be added as the project matures.
+License information will be added.
