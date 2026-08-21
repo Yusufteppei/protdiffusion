@@ -1,4 +1,4 @@
-# prot-diffusion
+# protdiffusion
 
 A research-oriented implementation of **geometric diffusion models for protein structure generation**.
 
@@ -19,7 +19,7 @@ where:
 
 This makes protein generation fundamentally different from ordinary diffusion over Euclidean vectors or images.
 
-The goal of `prot-diffusion` is to explore how diffusion models can operate directly on these geometric representations while preserving the relevant symmetries and structure of proteins.
+The goal of `protdiffusion` is to explore how diffusion models can operate directly on these geometric representations while preserving the relevant symmetries and structure of proteins.
 
 ## Current Direction
 
@@ -165,7 +165,7 @@ Current work is focused on:
 
 ## Project Philosophy
 
-`prot-diffusion` is primarily a **learning and research project**.
+`protdiffusion` is primarily a **learning and research project**.
 
 Rather than simply reproducing an existing architecture, the aim is to understand:
 
