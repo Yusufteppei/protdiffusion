@@ -14,6 +14,6 @@ class RigidLoss:
         rotation_loss = torch.mean(torch.sum((target1.rotation.matrix - target2.rotation.matrix) ** 2,
                                               dim=(-1, -2)) * mask)
 
-        print(f"rotation loss: {rotation_loss.item():.6f}, translation loss: {translation_loss.item():.6f}")
+        print(f"rotation loss: {rotation_loss.item():.4f}, translation loss: {translation_loss.item():.4f}")
 
         return translation_loss + rotation_loss 

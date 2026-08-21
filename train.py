@@ -51,4 +51,4 @@ for epoch in range(epochs):
 
 
         
-    print(f"Epoch {epoch+1}: Loss: {loss:.6f}")
+    print(f"Epoch {epoch+1}: Loss: {loss:.4f}")
