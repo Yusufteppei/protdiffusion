@@ -170,7 +170,7 @@ def test_diffuser_preserves_shapes(
     )
 
     # Rotation noise is represented as a 3D vector.
-    assert noise.rotation.matrix.shape == (
+    assert noise.rotation_vector.vector.shape == (
         4,
         100,
         3,
@@ -223,7 +223,7 @@ def test_rotation_diffuser_preserves_so3(
     )
 
     # Pass the Rotation object, not rigid.rotation.matrix.
-    Rt, _ = diffuser.rotation(
+    Rt, _ = diffuser.rotation_diffuser(
         rigid.rotation,
         timestep,
     )
@@ -251,14 +251,14 @@ def test_zero_rotation_noise_preserves_rotation(
         rigid.translation,
     )
 
-    Rt, returned_noise = diffuser.rotation(
+    Rt, returned_noise = diffuser.rotation_diffuser(
         rigid.rotation,
         timestep,
         noise=zero_noise,
     )
 
     assert torch.equal(
-        returned_noise.matrix,
+        returned_noise.vector,
         zero_noise,
     )
 
@@ -282,14 +282,14 @@ def test_translation_forward_equation(
         rigid.translation,
     )
 
-    xt, returned_noise = diffuser.translation(
+    xt, returned_noise = diffuser.translation_diffuser(
         rigid.translation,
         timestep,
         noise=explicit_noise,
     )
 
     alpha_bar = (
-        diffuser.translation.alpha_bar[timestep]
+        diffuser.translation_diffuser.alpha_bar[timestep]
     )
 
     while alpha_bar.ndim < rigid.translation.ndim:
