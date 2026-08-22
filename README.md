@@ -1,5 +1,6 @@
 # protdiffusion
 
+
 A research-oriented PyTorch implementation exploring **geometric diffusion models for protein structure generation**.
 
 The project began as a from-scratch reconstruction of ideas from **RFdiffusion**, with the goal of understanding and implementing the underlying machinery rather than treating existing models as black boxes. It is now evolving into a more experimental project focused on diffusion directly over protein backbone geometry.

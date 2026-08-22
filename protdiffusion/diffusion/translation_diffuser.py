@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-
+from jaxtyping import Float, jaxtyped, Bool, Int
+from beartype import beartype
 
 
 class TranslationDiffuser(nn.Module):
@@ -19,15 +20,21 @@ class TranslationDiffuser(nn.Module):
         self.register_buffer("alpha", alpha)
         self.register_buffer("alpha_bar", alpha_bar)
 
-
-    def forward(self, trans_0: torch.Tensor, timestep: int, 
-                noise:torch.Tensor = None, mask=None) -> tuple[torch.Tensor, torch.Tensor]:
+    @jaxtyped(typechecker=beartype)
+    def forward(self, trans_0: Float[torch.Tensor, "B L 3"], timestep: Int[torch.Tensor, "B"], 
+                noise: Float[torch.Tensor, "B L 3"] = None,
+                mask: Bool[torch.Tensor, "B L"] = None) -> tuple[Float[torch.Tensor, "B L 3"], 
+                                                                  Float[torch.Tensor, "B L 3"]]:
+        
         """
         trans_0: (..., 3)
         timestep:  (B,)
         """
         if noise is None:
             noise = torch.randn_like(trans_0)
+
+        if mask is None:
+            mask = torch.ones_like(trans_0[..., 0])
 
         alpha_bar = self.alpha_bar[timestep]
 

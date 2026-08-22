@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from protdiffusion.config import d_pair, d_res, n_res
 import math
+from jaxtyping import Float, jaxtyped, Int
+from beartype import beartype
 
 
 class PositionEncoder(nn.Module):
@@ -41,7 +43,9 @@ class InputEmbedder(nn.Module):
         self.right_proj = nn.Linear(d_res, d_pair)
 
 
-    def forward(self, batch):
+    @jaxtyped(typechecker=beartype)
+    def forward(self, batch: Int[torch.Tensor, "B L"]) -> tuple[Float[torch.Tensor, "B L d_res"], 
+                                                                Float[torch.Tensor, "B L L d_pair"]]:
         """
             Input is a seq sequence
         """

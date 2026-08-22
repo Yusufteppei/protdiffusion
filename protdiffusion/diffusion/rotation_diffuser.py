@@ -1,4 +1,6 @@
-import torch
+from torch import linspace, Tensor, zeros, ones, linspace, matmul, randn, matrix_exp
+from jaxtyping import Float, jaxtyped, Bool, Int
+from beartype import beartype
 import torch.nn as nn
 from protdiffusion.geometry import Rotation, RotationVector
 
@@ -9,13 +11,15 @@ class RotationDiffuser(nn.Module):
 
         super().__init__()
 
-        sigma = torch.linspace(sigma_start, sigma_end, num_timesteps)
+        sigma = linspace(sigma_start, sigma_end, num_timesteps)
 
         self.register_buffer("sigma", sigma)
 
 
-    def forward(self, R0: Rotation, timestep: int, 
-                noise: torch.Tensor =None, mask=None) -> tuple[Rotation, RotationVector]:
+    @jaxtyped(typechecker=beartype)
+    def forward(self, R0: Rotation, timestep: Int[Tensor, "B"], 
+                noise: Float[Tensor, "B L 3"] = None, 
+                mask: Bool[Tensor, "B L"] = None) -> tuple[Rotation, RotationVector]:
         """
         R0:       (..., 3, 3)
         timestep: (B,)
@@ -25,13 +29,20 @@ class RotationDiffuser(nn.Module):
         """
 
         if noise is None:
-            noise = torch.randn(
+            noise = randn(
                 *R0.matrix.shape[:-2],
                 3,
                 device=R0.matrix.device,
                 dtype=R0.matrix.dtype,
             )
 
+        if mask is None:
+            mask = ones(
+                *R0.matrix.shape[:-2],
+                device=R0.matrix.device,
+                dtype=R0.matrix.dtype,
+            )
+            
         sigma = self.sigma[timestep]
 
         while sigma.ndim < noise.ndim:
@@ -41,7 +52,7 @@ class RotationDiffuser(nn.Module):
         omega = sigma * noise
 
         # Convert the rotation vector into a skew-symmetric matrix.
-        K = torch.zeros(
+        K = zeros(
             *omega.shape[:-1],
             3,
             3,
@@ -58,10 +69,10 @@ class RotationDiffuser(nn.Module):
 
         # Exponentiate the skew-symmetric matrix to obtain
         # a valid rotation matrix in SO(3).
-        R_noise = torch.matrix_exp(K)
+        R_noise = matrix_exp(K)
 
         # Compose the noise rotation with the original rotation.
-        Rt = torch.matmul(R_noise, R0.matrix) * mask.unsqueeze(-1).unsqueeze(-1)
+        Rt = matmul(R_noise, R0.matrix) * mask.unsqueeze(-1).unsqueeze(-1)
         
         
         return Rotation(Rt), RotationVector(noise)

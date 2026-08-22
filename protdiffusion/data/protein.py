@@ -35,10 +35,10 @@ def get_sequence(structure: Structure) -> str:
 
 def get_coords(pdb_object: Structure) -> torch.Tensor:
     # FIX BACKBONE ORDER RELIANCE TO ACCOMODATE NON-PROTEIN RESIDUES
-    p = pdb_object
+    pdb = pdb_object
 
     coords = torch.Tensor()
-    residues =  p.get_residues()
+    residues = pdb.get_residues()
     while True:
         try:
             res = next(residues)
@@ -104,19 +104,19 @@ class Protein:
     
     @classmethod
     def load_pdb(cls, code="1UBQ")-> Protein:
-        ## Deprecate the path
+        
         try:
             structure = parser.get_structure("protein", f"{protein_pdb_path}/{code}.pdb")
         except:
             path = pdbl.retrieve_pdb_file(code, pdir="proteins", file_format="pdb", obsolete=False)
-            shutil.move(path, f"proteins/{code}.pdb")
+            shutil.move(path, f"{protein_pdb_path}/{code}.pdb")
             
             structure = parser.get_structure("protein", f"{protein_pdb_path}/{code}.pdb")
 
-        #seq = get_sequence(structure)
-        #coords = get_coords(structure)
-        #protein = Protein.from_coords(coords, sequence=seq)
-        return structure
+        seq = get_sequence(structure)
+        coords = get_coords(structure)
+        protein = Protein.from_coords(coords, sequence=seq)
+        return protein
 
     @classmethod
     def from_coords(cls, coords: torch.Tensor, sequence=None, mask=None, seq_tokens=None):
@@ -128,13 +128,11 @@ class Protein:
         return protein
 
     @classmethod
-    def from_code(cls, code: str="1UBQ", mask=None, seq_tokens=None):
-        obj = cls.load_pdb(code)
-        coords = get_coords(obj)
-        sequence = get_sequence(obj)
-        rigids = Rigid.from_coords(coords=coords)
-        protein = cls(rigids=rigids, coords=coords, sequence=sequence, mask=mask, seq_tokens=seq_tokens)
-
+    def from_code(cls, code: str="1UBQ", mask=None):
+        protein = cls.load_pdb(code)
+        rigids = Rigid.from_coords(coords=protein.coords)
+        protein.rigids = rigids
+        protein.mask = mask
         return protein
 
     @classmethod

@@ -1,10 +1,12 @@
 from __future__ import annotations
 import torch
+from jaxtyping import jaxtyped, Float
 from protdiffusion.utils import normalize
+from beartype import beartype
 
 
 class RotationVector:
-    def __init__(self, vector: torch.Tensor):
+    def __init__(self, vector: Float[torch.Tensor, "B L 3"]):
         self.vector = vector
 
     @classmethod
@@ -34,11 +36,14 @@ class RotationVector:
 
     
 class Rotation:
-    def __init__(self, matrix: torch.Tensor):
+    @jaxtyped(typechecker=beartype)
+    def __init__(self, matrix: Float[torch.Tensor, "... 3 3"]):
         self.matrix = matrix
 
+    
     @staticmethod
-    def from_rotvec(rotvec, eps=1e-8):
+    @jaxtyped(typechecker=beartype)
+    def from_rotvec(rotvec: Float[torch.Tensor, "B L 3"], eps=1e-8):
         """
         Convert rotation vectors to rotation matrices using
         the SO(3) exponential map.
@@ -100,7 +105,9 @@ class Rotation:
     def identity(cls):
         return cls(torch.eye(3))
 
-    def apply(self, x: torch.Tensor) -> torch.Tensor:
+
+    @jaxtyped(typechecker=beartype)
+    def apply(self, x: Float[torch.Tensor, "... 3"]) -> Float[torch.Tensor, "... 3"]:
         R = self.matrix
         while R.ndim < x.ndim + 1:
             R = R.unsqueeze(-3)
@@ -126,7 +133,9 @@ class Rotation:
 
 
 class Rigid:
-    def __init__(self, rotation: Rotation = None, translation: torch.Tensor = None, rotation_vector: RotationVector = None):
+    @jaxtyped(typechecker=beartype)
+    def __init__(self, rotation: Rotation = None, translation: Float[torch.Tensor, "... 3"] = None, 
+                 rotation_vector: RotationVector = None):
         if rotation is None and rotation_vector is not None:
             rotation = Rotation.from_rotvec(rotation_vector.vector)
             #print("derived rotation shape", rotation.matrix.shape)
@@ -137,9 +146,12 @@ class Rigid:
         if rotation_vector is None and rotation is not None:
             rotation_vector = RotationVector.from_rotation(rotation)
         self.rotation_vector = rotation_vector 
-        
+
+
+    
     @classmethod
-    def from_coords(cls, coords: torch.Tensor):
+    @jaxtyped(typechecker=beartype)
+    def from_coords(cls, coords: Float[torch.Tensor, "N 3 3"]):
         """
             ORDER - N, CA, C
             C - CA : x axis
@@ -173,7 +185,8 @@ class Rigid:
     def identity(cls):
         return cls(Rotation.identity(), torch.zeros(3))
 
-    def apply(self, x: torch.Tensor) -> torch.Tensor:
+    @jaxtyped(typechecker=beartype)
+    def apply(self, x: Float[torch.Tensor, "... 3"]) -> Float[torch.Tensor, "... 3"]:
         R = self.rotation.apply(x)
         t = self.translation
         while t.ndim < R.ndim:

@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import math
 from protdiffusion.config import d_time, max_period, d_res
+from jaxtyping import Float, Int, Bool, jaxtyped
+from beartype import beartype
 
 
 class TimeEmbedding(nn.Module):
@@ -24,7 +26,9 @@ class TimeEmbedding(nn.Module):
         self.translation_proj = nn.Linear(d_time, 3)
         self.rotation_proj = nn.Linear(d_time, 3)
 
-    def forward(self, timestep):
+    @jaxtyped(typechecker=beartype)
+    def forward(self, timestep: Int[torch.Tensor, "B L"]) -> tuple[Float[torch.Tensor, "B L 3"], 
+                                                                   Float[torch.Tensor, "B L 3"]]:
         """
         timestep: [B]
 

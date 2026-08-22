@@ -1,4 +1,6 @@
-import torch
+from torch import zeros, Tensor
+from jaxtyping import Float, jaxtyped, Bool
+from beartype import beartype
 import torch.nn as nn
 from protdiffusion.modules import InvariantPointAttention, IPATransition, BackboneUpdate
 from protdiffusion.geometry import Rigid, Rotation
@@ -15,14 +17,17 @@ class Trunk(nn.Module):
         self.backbone_update = BackboneUpdate()
 
 
-    def forward(self, single, pair, rigids=None, mask=None):
+    @jaxtyped(typechecker=beartype)
+    def forward(self, single: Float[Tensor, "B L d_res"], pair: Float[Tensor, "B L L d_pair"], 
+                rigids: Rigid = None, mask: Bool[Tensor, "B L"] = None):
+        
         single = single * mask[..., None]
         pair = pair * mask[..., None, None]
         B, L, _ = single.shape
         if rigids is None:
             rigids = Rigid(
                 Rotation.identity(),
-                torch.zeros(B, L, 3)
+                zeros(B, L, 3)
             )
 
         single = single + self.ipa(single, pair, rigids, mask)

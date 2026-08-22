@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from protdiffusion.config import d_pair, d_res, n_h
 import math
+from jaxtyping import Float, Bool, jaxtyped
+from beartype import beartype
 
 
 class InvariantPointAttention(nn.Module):
@@ -26,7 +28,9 @@ class InvariantPointAttention(nn.Module):
         self.o_proj = nn.Linear( 3*num_qk_points*num_heads + d_res, d_res)
 
 
-    def forward(self, single, pair, rigids, mask=None):
+    @jaxtyped(typechecker=beartype)
+    def forward(self, single: Float[torch.Tensor, "... d_res"], pair: Float[torch.Tensor, "... d_pair"],
+                 rigids, mask: Bool[torch.Tensor, "B L"]=None):
         B, L, d_res = single.shape
 
         Qp = self.qp_proj(single).view(B, L, n_h, self.num_qk_points, 3)
@@ -93,7 +97,7 @@ class IPATransition(nn.Module):
         )
 
 
-    def forward(self, single):
+    def forward(self, single: Float[torch.Tensor, "B L d_res"]):
         single = self.net(single)
 
         return single

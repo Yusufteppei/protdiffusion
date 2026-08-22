@@ -39,7 +39,7 @@ class NoisePredictor(nn.Module):
             nn.Linear(6, 3)
         )
 
-    def forward(self, xt, timestep, mask=None) -> Rigid:
+    def forward(self, xt, timestep) -> Rigid:
 
         rotation_time, translation_time = self.time_embedding(timestep)
 
@@ -84,3 +84,43 @@ class NoisePredictor(nn.Module):
         )
 
         return Rigid(rotation_vector=RotationVector(rotation_noise), translation=translation_noise)
+
+
+class NoDiffusionPredictor(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+        self.translation_net = nn.Sequential(
+            nn.Linear(3, 24),
+            nn.GELU(),
+            nn.Linear(24, 18),
+            nn.GELU(),
+            nn.Linear(18, 12),
+            nn.GELU(),
+            nn.Linear(12, 6),
+            nn.GELU(),
+            nn.Linear(6, 3)
+        )
+
+        self.rotation_net = nn.Sequential(
+            nn.Linear(3, 24),
+            nn.GELU(),
+            nn.Linear(24, 18),
+            nn.GELU(),
+            nn.Linear(18, 12),
+            nn.GELU(),
+            nn.Linear(12, 6),
+            nn.GELU(),
+            nn.Linear(6, 3)
+        )
+        
+
+    def forward(self, xt) -> Rigid:
+        B, L = xt.translation.shape[:2]
+
+
+        rotation = self.rotation_net(xt.rotation_vector.vector)
+        translation = self.translation_net(xt.translation)
+
+        return Rigid(rotation_vector=RotationVector(rotation), translation=translation)
