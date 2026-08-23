@@ -27,8 +27,8 @@ class TimeEmbedding(nn.Module):
         self.rotation_proj = nn.Linear(d_time, 3)
 
     @jaxtyped(typechecker=beartype)
-    def forward(self, timestep: Int[torch.Tensor, "B L"]) -> tuple[Float[torch.Tensor, "B L 3"], 
-                                                                   Float[torch.Tensor, "B L 3"]]:
+    def forward(self, timestep: Int[torch.Tensor, "B"]) -> tuple[Float[torch.Tensor, "B 3"], 
+                                                                   Float[torch.Tensor, "B 3"]]:
         """
         timestep: [B]
 
