@@ -43,7 +43,7 @@ class Rotation:
     
     @staticmethod
     @jaxtyped(typechecker=beartype)
-    def from_rotvec(rotvec: Float[torch.Tensor, "B L 3"], eps=1e-8):
+    def from_rotvec(rotvec: Float[torch.Tensor, "... 3"], eps=1e-8):
         """
         Convert rotation vectors to rotation matrices using
         the SO(3) exponential map.

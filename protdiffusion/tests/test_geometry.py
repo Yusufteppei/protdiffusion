@@ -11,6 +11,7 @@ from protdiffusion.utils.geometry import (
     N_CA_C,
     CA_C,
 )
+from protdiffusion.geometry import Rigid, Rotation, RotationVector
     
 load_pdb = Protein.load_pdb
 DTYPE = torch.float32
@@ -194,4 +195,393 @@ def test_backbone_reconstruction_from_pdb():
     assert torch.allclose(pred_c, c_next, atol=ATOL)
 
 
-    
+# ============================================================
+# Rotation tests
+# ============================================================
+
+
+def test_rotation_identity_from_zero_rotvec():
+    rotvec = torch.zeros(3, dtype=DTYPE)
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    expected = torch.eye(3, dtype=DTYPE)
+
+    assert rotation.matrix.shape == (3, 3)
+    assert torch.allclose(
+        rotation.matrix,
+        expected,
+        atol=ATOL,
+    )
+
+
+def test_rotation_from_rotvec_x_axis():
+    """
+    Rotate 90 degrees around x-axis.
+
+    y -> z
+    z -> -y
+    """
+
+    rotvec = torch.tensor(
+        [math.pi / 2, 0.0, 0.0],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    expected = torch.tensor(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, -1.0],
+            [0.0, 1.0, 0.0],
+        ],
+        dtype=DTYPE,
+    )
+
+    assert torch.allclose(
+        rotation.matrix,
+        expected,
+        atol=ATOL,
+    )
+
+
+def test_rotation_from_rotvec_y_axis():
+    """
+    Rotate 90 degrees around y-axis.
+
+    x -> -z
+    z -> x
+    """
+
+    rotvec = torch.tensor(
+        [0.0, math.pi / 2, 0.0],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    expected = torch.tensor(
+        [
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0],
+            [-1.0, 0.0, 0.0],
+        ],
+        dtype=DTYPE,
+    )
+
+    assert torch.allclose(
+        rotation.matrix,
+        expected,
+        atol=ATOL,
+    )
+
+
+def test_rotation_from_rotvec_z_axis():
+    """
+    Rotate 90 degrees around z-axis.
+
+    x -> y
+    y -> -x
+    """
+
+    rotvec = torch.tensor(
+        [0.0, 0.0, math.pi / 2],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    expected = torch.tensor(
+        [
+            [0.0, -1.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=DTYPE,
+    )
+
+    assert torch.allclose(
+        rotation.matrix,
+        expected,
+        atol=ATOL,
+    )
+
+
+def test_rotation_apply():
+    """
+    Rotate x by 90 degrees around z.
+
+    [1, 0, 0] -> [0, 1, 0]
+    """
+
+    rotvec = torch.tensor(
+        [0.0, 0.0, math.pi / 2],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    x = torch.tensor(
+        [1.0, 0.0, 0.0],
+        dtype=DTYPE,
+    )
+
+    expected = torch.tensor(
+        [0.0, 1.0, 0.0],
+        dtype=DTYPE,
+    )
+
+    result = rotation.apply(x)
+
+    assert torch.allclose(
+        result,
+        expected,
+        atol=ATOL,
+    )
+
+
+def test_rotation_inverse():
+    rotvec = torch.tensor(
+        [0.3, -0.7, 1.2],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    inverse = rotation.inverse()
+
+    identity = rotation.compose(inverse)
+
+    expected = torch.eye(3, dtype=DTYPE)
+
+    assert torch.allclose(
+        identity.matrix,
+        expected,
+        atol=ATOL,
+    )
+
+
+def test_rotation_inverse_apply():
+    rotvec = torch.tensor(
+        [0.3, -0.7, 1.2],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    x = torch.tensor(
+        [1.2, -3.0, 0.7],
+        dtype=DTYPE,
+    )
+
+    rotated = rotation.apply(x)
+
+    recovered = rotation.inverse().apply(rotated)
+
+    assert torch.allclose(
+        recovered,
+        x,
+        atol=ATOL,
+    )
+
+
+def test_rotation_compose():
+    """
+    Two 90 degree rotations around z should produce
+    a 180 degree rotation.
+    """
+
+    rotvec = torch.tensor(
+        [0.0, 0.0, math.pi / 2],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    composed = rotation.compose(rotation)
+
+    expected = Rotation.from_rotvec(
+        torch.tensor(
+            [0.0, 0.0, math.pi],
+            dtype=DTYPE,
+        )
+    )
+
+    assert torch.allclose(
+        composed.matrix,
+        expected.matrix,
+        atol=ATOL,
+    )
+
+
+def test_rotation_matrix_is_orthogonal():
+    rotvec = torch.tensor(
+        [0.7, -1.2, 0.3],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    R = rotation.matrix
+
+    identity = R.transpose(-1, -2) @ R
+
+    expected = torch.eye(3, dtype=DTYPE)
+
+    assert torch.allclose(
+        identity,
+        expected,
+        atol=ATOL,
+    )
+
+
+def test_rotation_matrix_has_determinant_one():
+    rotvec = torch.tensor(
+        [0.7, -1.2, 0.3],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    determinant = torch.linalg.det(rotation.matrix)
+
+    assert torch.allclose(
+        determinant,
+        torch.tensor(1.0, dtype=DTYPE),
+        atol=ATOL,
+    )
+
+
+def test_rotvec_to_rotation_to_rotvec():
+    """
+    rotvec -> Rotation -> rotvec -> Rotation
+
+    Compare matrices rather than rotation vectors because
+    rotation vector representations are not globally unique.
+    """
+
+    rotvec = torch.tensor(
+        [0.3, -0.7, 1.2],
+        dtype=DTYPE,
+    )
+
+    rotation_1 = Rotation.from_rotvec(rotvec)
+
+    recovered_rotvec = RotationVector.from_rotation(
+        rotation_1
+    )
+
+    rotation_2 = Rotation.from_rotvec(
+        recovered_rotvec.vector
+    )
+
+    assert torch.allclose(
+        rotation_1.matrix,
+        rotation_2.matrix,
+        atol=ATOL,
+    )
+
+
+def test_rotation_to_rotvec_to_rotation():
+    """
+    Rotation -> rotvec -> Rotation.
+    """
+
+    original = Rotation.from_rotvec(
+        torch.tensor(
+            [0.8, -0.4, 1.1],
+            dtype=DTYPE,
+        )
+    )
+
+    rotvec = RotationVector.from_rotation(
+        original
+    )
+
+    recovered = Rotation.from_rotvec(
+        rotvec.vector
+    )
+
+    assert torch.allclose(
+        original.matrix,
+        recovered.matrix,
+        atol=ATOL,
+    )
+
+
+def test_rotation_batch():
+    rotvec = torch.tensor(
+        [
+            [0.0, 0.0, 0.0],
+            [math.pi / 2, 0.0, 0.0],
+            [0.0, math.pi / 2, 0.0],
+            [0.0, 0.0, math.pi / 2],
+        ],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    assert rotation.matrix.shape == (4, 3, 3)
+
+    identity = torch.eye(3, dtype=DTYPE)
+
+    orthogonal = (
+        rotation.matrix.transpose(-1, -2)
+        @ rotation.matrix
+    )
+
+    assert torch.allclose(
+        orthogonal,
+        identity.expand_as(orthogonal),
+        atol=ATOL,
+    )
+
+    determinants = torch.linalg.det(rotation.matrix)
+
+    assert torch.allclose(
+        determinants,
+        torch.ones(4, dtype=DTYPE),
+        atol=ATOL,
+    )
+
+
+def test_rotation_apply_batch():
+    """
+    Each batch element gets a different rotation.
+    """
+
+    rotvec = torch.tensor(
+        [
+            [0.0, 0.0, math.pi / 2],
+            [0.0, 0.0, math.pi],
+        ],
+        dtype=DTYPE,
+    )
+
+    rotation = Rotation.from_rotvec(rotvec)
+
+    x = torch.tensor(
+        [
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+        ],
+        dtype=DTYPE,
+    )
+
+    expected = torch.tensor(
+        [
+            [0.0, 1.0, 0.0],
+            [-1.0, 0.0, 0.0],
+        ],
+        dtype=DTYPE,
+    )
+
+    result = rotation.apply(x)
+
+    assert torch.allclose(
+        result,
+        expected,
+        atol=ATOL,
+    )
