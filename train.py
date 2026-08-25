@@ -19,28 +19,32 @@ codes = [
 ]
 MAX_RESIDUES = 600
 codes = [ code for code in codes if Protein.from_code(code).__len__() <= MAX_RESIDUES ]
-codes = codes[:1]
+codes = codes[:5]
 
 prots = Protein.from_codes(codes)
 
 dataset = ProteinDataset(proteins=prots)
 
+print(f"Loading Data ... {len(dataset)} proteins, max residues: {MAX_RESIDUES}")
 data_loader = DataLoader(
     dataset=dataset,
     batch_size=4,
     collate_fn=ProteinDataset.collate_fn
 )
-model = ProtDiffusion(trunks=10, max_residues=MAX_RESIDUES)
+
+#model = ProtDiffusion(trunks=10, max_residues=MAX_RESIDUES)
 criterion = RigidLoss()
-optimizer = Adam(model.parameters(), lr=1e-4)
-model.train()
+#optimizer = Adam(model.parameters(), lr=1e-4)
+
 epochs = 20
 
 
-def train_full(epochs=epochs):
-    model = ProtDiffusion(trunks=10, max_residues=MAX_RESIDUES)
-    optimizer = Adam(model.parameters(), lr=1e-5)
+def train_full(epochs=epochs, trunks=10):
+    print("Initializing Model ...")
+    model = ProtDiffusion(trunks=trunks, max_residues=MAX_RESIDUES)
+    optimizer = Adam(model.parameters(), lr=3e-4)
     model.train()
+    print("Training ...")
     for epoch in range(epochs):
         for tokens, rigids, mask, _ in data_loader:
             B, L = tokens.shape
@@ -55,16 +59,18 @@ def train_full(epochs=epochs):
 
 
             
-        if epoch % 25 == 24:
+        if (epoch + 1) % 100 == 0:
             print(f"Epoch {epoch+1}: Loss: {loss:.4f}")
     
     return loss, model
 
 
-def train_no_diffusion(epochs=epochs):
-    model = ProtNoDiffusion(trunks=10, max_residues=MAX_RESIDUES)
+def train_no_diffusion(epochs=epochs, trunks=10):
+    print("Initializing Model ...")
+    model = ProtNoDiffusion(trunks=trunks, max_residues=MAX_RESIDUES)
     model.train()
-    optimizer = Adam(model.parameters(), lr=1e-5)
+    optimizer = Adam(model.parameters(), lr=3e-4)
+    print("Training ...")
     for epoch in range(epochs):
         for tokens, rigids, mask, _ in data_loader:
             B, L = tokens.shape
@@ -77,13 +83,16 @@ def train_no_diffusion(epochs=epochs):
             optimizer.step()
 
 
-        if epoch % 25 == 24:
-            print(f"Epoch {epoch+1}: Loss: {loss:.4f}")
+        if (epoch + 1) % 100 == 0:
+            print(f"Epoch {epoch+1}: Loss: {loss:.6f}")
 
     return loss, model
 
+#print([(prot.rigids.translation.mean(), prot.rigids.translation.std()) for prot in prots])
 
-l1, m1 = train_no_diffusion(10)
-l2, m2 = train_full(10)
+l1, m1 = train_no_diffusion(5000, 5)
+#del(m1)
+#l2, _ = train_full(3000, 20)
 
-print(f"No diffusion loss: {l1:.4f}, Full diffusion loss: {l2:.4f}")
+print(f"No diffusion loss: {l1:.6f}")
+#print(f"Full diffusion loss: {l2:.6f}")

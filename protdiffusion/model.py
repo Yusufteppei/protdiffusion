@@ -23,14 +23,14 @@ class ProtDiffusion(nn.Module):
     def forward(self, tokens: Int[Tensor, "B L" ], rigids: Rigid,
                  timestep: Int[Tensor, "B"], mask: Bool[Tensor, "B L"]) -> tuple[Rigid, Rigid]:
         single, pair = self.input_embedder(tokens)
-        rigids_t, noise_t = self.diffuser(x0=rigids, timestep=timestep, mask=mask)
-        
+        rigids_t, noise_t = self.diffuser(rigid_0=rigids, timestep=timestep, mask=mask)
+
         for _ in range(self.trunks):
             single, pair, rigids_t = self.trunk(single, pair, rigids=rigids_t, mask=mask)
         
-        noise_pred = self.noise_predictor(rigids_t, timestep)
-
-        return noise_t, noise_pred
+        rigids_pred = self.noise_predictor(rigids_t, timestep)
+        
+        return rigids, rigids_pred #noise_t, noise_pred
 
 
 class ProtNoDiffusion(nn.Module):
@@ -54,3 +54,4 @@ class ProtNoDiffusion(nn.Module):
         rigids_pred = self.no_diffusion_predictor(rigids)
 
         return rigids, rigids_pred
+

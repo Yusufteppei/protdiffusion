@@ -6,7 +6,7 @@ from beartype import beartype
 
 class TranslationDiffuser(nn.Module):
 
-    def __init__(self, num_timesteps, beta_start=1e-4, beta_end=2e-2):
+    def __init__(self, num_timesteps, beta_start=1e-3, beta_end=2e-2):
 
         super().__init__()
 
@@ -34,16 +34,21 @@ class TranslationDiffuser(nn.Module):
             noise = torch.randn_like(trans_0)
 
         if mask is None:
-            mask = torch.ones_like(trans_0[..., 0])
+            mask = torch.ones_like(trans_0[..., 0], dtype=torch.bool)
 
         alpha_bar = self.alpha_bar[timestep]
 
         while alpha_bar.ndim < trans_0.ndim:
             alpha_bar = alpha_bar.unsqueeze(-1)
 
+        mask_3d = mask.unsqueeze(-1)
+
         trans_t = (
             alpha_bar.sqrt() * trans_0
             + (1.0 - alpha_bar).sqrt() * noise
-        ) * mask.unsqueeze(-1)
+        ) * mask_3d
 
+        noise = noise * mask_3d
+        assert torch.all(trans_t[~mask] == 0)
+        assert torch.all(noise[~mask] == 0)
         return trans_t, noise

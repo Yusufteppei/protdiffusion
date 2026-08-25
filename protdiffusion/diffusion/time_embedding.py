@@ -23,12 +23,12 @@ class TimeEmbedding(nn.Module):
         )
 
         self.register_buffer("frequencies", frequencies)
-        self.translation_proj = nn.Linear(d_time, 3)
-        self.rotation_proj = nn.Linear(d_time, 3)
+        self.translation_proj = nn.Linear(d_time, d_time) #3)
+        self.rotation_proj = nn.Linear(d_time, d_time)# 3)
 
     @jaxtyped(typechecker=beartype)
-    def forward(self, timestep: Int[torch.Tensor, "B"]) -> tuple[Float[torch.Tensor, "B 3"], 
-                                                                   Float[torch.Tensor, "B 3"]]:
+    def forward(self, timestep: Int[torch.Tensor, "B"]) -> tuple[Float[torch.Tensor, "B 128"], 
+                                                                 Float[torch.Tensor, "B 128"]]:
         """
         timestep: [B]
 
@@ -40,8 +40,6 @@ class TimeEmbedding(nn.Module):
 
         args = timestep[:, None] * self.frequencies[None, :]
 
-        #print(f"FREQ: {self.frequencies}")
-        #print("ARGS", args)
 
         embedding = torch.cat(
             [

@@ -40,7 +40,7 @@ class RotationDiffuser(nn.Module):
             mask = ones(
                 *R0.matrix.shape[:-2],
                 device=R0.matrix.device,
-                dtype=R0.matrix.dtype,
+                dtype=torch.bool,
             )
             
         sigma = self.sigma[timestep]
@@ -73,6 +73,7 @@ class RotationDiffuser(nn.Module):
 
         # Compose the noise rotation with the original rotation.
         Rt = matmul(R_noise, R0.matrix) * mask.unsqueeze(-1).unsqueeze(-1)
-        
+
+        noise = noise * mask.unsqueeze(-1)
         
         return Rotation(Rt), RotationVector(noise)

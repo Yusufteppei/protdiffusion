@@ -14,4 +14,6 @@ class RigidLoss:
         rotation_loss = torch.mean(torch.sum((target1.rotation.matrix - target2.rotation.matrix) ** 2,
                                               dim=(-1, -2)) * mask)
 
-        return translation_loss + rotation_loss 
+        with open("logs/losses", "w") as f:
+            f.write(f"Translation loss: {translation_loss}, Rotation loss: {rotation_loss}")
+        return translation_loss + rotation_loss

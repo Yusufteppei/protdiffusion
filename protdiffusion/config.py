@@ -11,8 +11,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 amino_acids = [
             "A", "R", "N", "D", "C", "Q", "E", "G", "H", "I",
-            "L", "K", "M", "F", "P",
-            "S", "T", "W", "Y", "V",
+            "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V",
             "X"
 ]
 

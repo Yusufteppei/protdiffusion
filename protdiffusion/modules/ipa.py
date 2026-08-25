@@ -91,9 +91,13 @@ class IPATransition(nn.Module):
         super().__init__()
 
         self.net = nn.Sequential(
-            nn.Linear(d_res, 4*d_res),
+            nn.Linear(d_res, 2*d_res),
             nn.GELU(),
-            nn.Linear(4*d_res, d_res)
+            nn.Linear(2*d_res, 2*d_res),
+            nn.GELU(),
+            nn.Linear(2*d_res, 2*d_res),
+            nn.GELU(),
+            nn.Linear(2*d_res, d_res)
         )
 
 
