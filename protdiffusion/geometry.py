@@ -3,6 +3,8 @@ import torch
 from jaxtyping import jaxtyped, Float
 from protdiffusion.utils import normalize
 from beartype import beartype
+from protdiffusion.config import device
+
 
 
 class RotationVector:
@@ -30,7 +32,7 @@ class RotationVector:
         sin_theta[small_angle_mask] = 1.0
 
         log_R = (theta / (2 * sin_theta))[..., None, None] * (R - R.transpose(-1, -2))
-        rotvec = torch.stack([log_R[..., 2, 1], log_R[..., 0, 2], log_R[..., 1, 0]], dim=-1)
+        rotvec = torch.stack([log_R[..., 2, 1], log_R[..., 0, 2], log_R[..., 1, 0]], dim=-1).to(device)
 
         return cls(rotvec)
 
@@ -66,7 +68,7 @@ class Rotation:
             zero, -z,    y,
             z,     zero, -x,
             -y,    x,    zero
-        ], dim=-1).reshape(*rotvec.shape[:-1], 3, 3)
+        ], dim=-1).reshape(*rotvec.shape[:-1], 3, 3).to(device)
 
         # Rodrigues:
         #
@@ -79,36 +81,36 @@ class Rotation:
             theta2 > eps,
             torch.sin(theta) / theta,
             1.0 - theta2 / 6.0
-        )
+        ).to(device)
 
         B = torch.where(
             theta2 > eps,
             (1.0 - torch.cos(theta)) / theta2,
             0.5 - theta2 / 24.0
-        )
+        ).to(device)
 
         I = torch.eye(
             3,
             device=rotvec.device,
             dtype=rotvec.dtype
-        )
+        ).to(device)
 
         R = (
             I
             + A[..., None] * K
             + B[..., None] * (K @ K)
-        )
+        ).to(device)
 
         return Rotation(R)
 
     @classmethod
     def identity(cls):
-        return cls(torch.eye(3))
+        return cls(torch.eye(3).to(device))
 
 
     @jaxtyped(typechecker=beartype)
     def apply(self, x: Float[torch.Tensor, "... 3"]) -> Float[torch.Tensor, "... 3"]:
-        R = self.matrix
+        R = self.matrix.to(device)
         while R.ndim < x.ndim + 1:
             R = R.unsqueeze(-3)
         return torch.einsum(
@@ -169,12 +171,12 @@ class Rigid:
         e1 = a_ 
 
         
-        projection = torch.sum(b * e1, dim=-1, keepdim=True)
-        e2 = normalize(b - projection * e1)
-        e3 = torch.cross(e1, e2, dim=-1)
+        projection = torch.sum(b * e1, dim=-1, keepdim=True).to(device)
+        e2 = normalize(b - projection * e1).to(device)
+        e3 = torch.cross(e1, e2, dim=-1).to(device)
 
-        R = torch.stack([e1, e2, e3], dim=-1)
-        t = CA[:, 1,:]
+        R = torch.stack([e1, e2, e3], dim=-1).to(device)
+        t = CA[:, 1,:].to(device)
         rigids = [ cls(rotation=Rotation(R[i]), translation=t[i]) for i in range(R.shape[-3]) ]
         rigids = cls.from_list(rigids)
         return rigids
@@ -187,8 +189,9 @@ class Rigid:
 
     @jaxtyped(typechecker=beartype)
     def apply(self, x: Float[torch.Tensor, "... 3"]) -> Float[torch.Tensor, "... 3"]:
+        x = x.to(device)
         R = self.rotation.apply(x)
-        t = self.translation
+        t = self.translation.to(device)
         while t.ndim < R.ndim:
             t = t.unsqueeze(-2)
         return R + t
@@ -205,7 +208,7 @@ class Rigid:
         """
 
         rot = self.rotation.compose(rigid2.rotation)
-        trans = self.rotation.apply(rigid2.translation) + self.translation
+        trans = self.rotation.apply(rigid2.translation) + self.translation.to(device)
 
         return Rigid(rotation=rot, translation=trans)
 
