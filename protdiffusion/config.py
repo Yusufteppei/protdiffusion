@@ -1,4 +1,5 @@
 import torch
+from pathlib import Path
 
 n_res = NUM_RESIDUES = 22
 d_res = RESIDUE_DIM = 256
@@ -16,3 +17,5 @@ amino_acids = [
 ]
 
 protein_pdb_path = "protdiffusion/data/proteins"
+
+ROOT_DIR = Path(__file__).resolve().parent

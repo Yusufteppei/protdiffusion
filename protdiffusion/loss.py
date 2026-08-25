@@ -1,5 +1,6 @@
 from protdiffusion.geometry import Rigid, Rotation
 import torch
+from protdiffusion.config import ROOT_DIR
 
 
 class RigidLoss:
@@ -14,6 +15,6 @@ class RigidLoss:
         rotation_loss = torch.mean(torch.sum((target1.rotation.matrix - target2.rotation.matrix) ** 2,
                                               dim=(-1, -2)) * mask)
 
-        with open("logs/losses", "w") as f:
+        with open(f"{ROOT_DIR}/logs/losses", "w") as f:
             f.write(f"Translation loss: {translation_loss}, Rotation loss: {rotation_loss}")
         return translation_loss + rotation_loss

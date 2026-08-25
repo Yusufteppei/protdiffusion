@@ -4,11 +4,12 @@ from protdiffusion.data import Protein, ProteinDataset
 from protdiffusion.data.tokenizer import ProteinTokenizer
 from torch.utils.data import DataLoader
 from protdiffusion.geometry import Rigid, Rotation
-from protdiffusion.config import device
+from protdiffusion.config import device, ROOT_DIR
 from protdiffusion.loss import RigidLoss
 from torch.optim import Adam
 
-
+print(ROOT_DIR)
+print("Training Device: " + device)
 tokenizer = ProteinTokenizer()
 
 ##TOO LARGE "1GB1","1AON", "1FAT", "1L2Y"
