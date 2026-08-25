@@ -114,6 +114,13 @@ def rigid():
         length=100,
     )
 
+@pytest.fixture
+def mask():
+    return torch.ones(
+        (4, 100),
+        dtype=torch.bool
+    )
+
 
 # ============================================================
 # Diffuser Tests
@@ -122,8 +129,10 @@ def rigid():
 def test_diffuser_returns_rigid_objects(
     diffuser,
     rigid,
+    mask=None
 ):
-
+    if mask is None:
+        mask = torch.ones((4, 100), dtype=torch.bool)
     timestep = torch.randint(
         0,
         diffuser.num_timesteps,
@@ -133,6 +142,7 @@ def test_diffuser_returns_rigid_objects(
     xt, noise = diffuser(
         rigid,
         timestep,
+        mask
     )
 
     assert isinstance(xt, Rigid)
@@ -142,8 +152,10 @@ def test_diffuser_returns_rigid_objects(
 def test_diffuser_preserves_shapes(
     diffuser,
     rigid,
+    mask=None
 ):
-
+    if mask is None:
+        mask = torch.ones((4, 100), dtype=torch.bool)
     timestep = torch.randint(
         0,
         diffuser.num_timesteps,
@@ -153,6 +165,7 @@ def test_diffuser_preserves_shapes(
     xt, noise = diffuser(
         rigid,
         timestep,
+        mask
     )
 
     # xt contains a Rotation object.
@@ -186,8 +199,10 @@ def test_diffuser_preserves_shapes(
 def test_noised_rotation_is_so3(
     diffuser,
     rigid,
+    mask=None
 ):
-
+    if mask is None:
+        mask = torch.ones((4, 100), dtype=torch.bool)
     timestep = torch.randint(
         0,
         diffuser.num_timesteps,
@@ -197,6 +212,7 @@ def test_noised_rotation_is_so3(
     xt, _ = diffuser(
         rigid,
         timestep,
+        mask
     )
 
     assert_is_so3(
