@@ -36,7 +36,6 @@ nvidia-nvtx==13.0.85
 packaging==26.3
 pillow==12.3.0
 pluggy==1.6.0
--e git+https://github.com/Yusufteppei/protdiffusion.git@d93cfae85b813bcf2e9beb15308c82a039aa2e71#egg=protdiffusion
 Pygments==2.21.0
 pyparsing==3.3.2
 pytest==9.1.1
