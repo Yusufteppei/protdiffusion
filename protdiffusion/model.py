@@ -9,7 +9,7 @@ from beartype import beartype
 
 
 class ProtDiffusion(nn.Module):
-    def __init__(self, trunks, max_residues=2048):
+    def __init__(self, trunks=20, max_residues=2048):
         super().__init__()
 
         self.max_residues = max_residues
@@ -31,6 +31,9 @@ class ProtDiffusion(nn.Module):
         rigids_pred = self.noise_predictor(rigids_t, timestep)
         
         return rigids, rigids_pred #noise_t, noise_pred
+
+    def __str__(self):
+        return f"diffusion_t{self.trunks}"
 
 
 class ProtNoDiffusion(nn.Module):
@@ -54,4 +57,8 @@ class ProtNoDiffusion(nn.Module):
         rigids_pred = self.no_diffusion_predictor(rigids)
 
         return rigids, rigids_pred
+
+
+    def __str__(self):
+        return f"no_diffusion_t{self.trunks}"
 

@@ -2,6 +2,7 @@ from torch import linspace, Tensor, zeros, ones, linspace, matmul, randn, matrix
 from jaxtyping import Float, jaxtyped, Bool, Int
 from beartype import beartype
 import torch.nn as nn
+import torch
 from protdiffusion.geometry import Rotation, RotationVector
 
 

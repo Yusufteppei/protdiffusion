@@ -2,6 +2,7 @@ from torch.utils.data import DataLoader, Dataset
 from protdiffusion.data import Protein, ProteinTokenizer
 import torch 
 from protdiffusion.geometry import Rigid
+from protdiffusion.config import device
 
 
 tokenizer = ProteinTokenizer()
@@ -14,7 +15,7 @@ class ProteinDataset(Dataset):
     def __getitem__(self, idx):
         prot = self.proteins[idx]
         #seq = prot.sequence
-        tokens = tokenizer.encode(prot.sequence)
+        tokens = tokenizer.encode(prot.sequence).to(device)
         rigids = prot.rigids
         
         return tokens, rigids
@@ -27,7 +28,7 @@ class ProteinDataset(Dataset):
         lengths = torch.tensor(
             [len(x) for x in tokens],
             dtype=torch.long
-        )
+        ).to(device)
 
         max_len = lengths.max().item()
         protein_rigids = [ pr._extend(max_len) for pr in protein_rigids ]
