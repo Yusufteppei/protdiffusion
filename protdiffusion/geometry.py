@@ -3,7 +3,7 @@ import torch
 from jaxtyping import jaxtyped, Float
 from protdiffusion.utils import normalize
 from beartype import beartype
-from protdiffusion.config import device
+from protdiffusion.config import device, ROOT_DIR
 
 
 
@@ -239,3 +239,158 @@ class Rigid:
             return Rigid.from_list(rigids_list)
         else:
             return self
+
+    def to_pdb(
+        self,
+        name: str,
+        mask: torch.Tensor | None = None,
+        chain_id: str = "A",
+    ):
+        """
+        Convert residue backbone rigids to a PDB file.
+
+        The rigid frame is assumed to be:
+
+            origin: CA
+            x-axis: CA -> C
+            y-axis: in the N-CA-C plane
+            z-axis: perpendicular to that plane
+
+        Writes backbone atoms:
+
+            N, CA, C
+
+        Args:
+            path:
+                Output PDB file.
+
+            mask:
+                Optional residue mask of shape (..., L).
+                Masked residues are skipped.
+
+            chain_id:
+                PDB chain identifier.
+
+        Returns:
+            coords: Tensor of shape (..., L, 3, 3)
+
+            Atom order:
+                N, CA, C
+        """
+
+        device_ = self.translation.device
+        dtype = self.translation.dtype
+
+        # Approximate canonical backbone geometry in the local
+        # residue frame.
+        #
+        # CA is the origin.
+        # C lies on the +x axis.
+        #
+        # Coordinates are approximately consistent with:
+        #
+        # |CA-C| ≈ 1.525 Å
+        # |CA-N| ≈ 1.458 Å
+        # angle N-CA-C ≈ 111°
+
+        angle = torch.tensor(
+            111.0 * torch.pi / 180.0,
+            device=device_,
+            dtype=dtype,
+        )
+
+        n_ca = 1.458
+        ca_c = 1.525
+
+        local_coords = torch.tensor(
+            [
+                [
+                    n_ca * torch.cos(angle),
+                    n_ca * torch.sin(angle),
+                    0.0,
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0,
+                ],
+                [
+                    ca_c,
+                    0.0,
+                    0.0,
+                ],
+            ],
+            device=device_,
+            dtype=dtype,
+        )
+
+        # Shape:
+        #
+        # translations: (..., L, 3)
+        # local_coords: (3, 3)
+        #
+        # Result:
+        #
+        # (..., L, 3 atoms, 3 xyz)
+
+        coords = torch.einsum(
+            "...ij,aj->...ai",
+            self.rotation.matrix,
+            local_coords,
+        )
+
+        coords = coords + self.translation.unsqueeze(-2)
+
+        # Handle batched rigids.
+        #
+        # For writing a single PDB, select the first batch element.
+        if coords.ndim == 4:
+            coords = coords[0]
+
+            if mask is not None and mask.ndim == 2:
+                mask = mask[0]
+
+        if mask is None:
+            mask = torch.ones(
+                coords.shape[0],
+                dtype=torch.bool,
+                device=coords.device,
+            )
+
+        atom_names = ["N", "CA", "C"]
+
+        with open(f"{ROOT_DIR}/generated/{name}.pdb", "w") as f:
+
+            atom_serial = 1
+            residue_index = 1
+
+            for residue, valid in zip(coords, mask):
+
+                if not valid:
+                    continue
+
+                for atom_name, xyz in zip(atom_names, residue):
+
+                    x, y, z = xyz.detach().cpu().tolist()
+
+                    f.write(
+                        f"ATOM  "
+                        f"{atom_serial:5d} "
+                        f"{atom_name:^4s} "
+                        f"ALA "
+                        f"{chain_id}"
+                        f"{residue_index:4d}    "
+                        f"{x:8.3f}"
+                        f"{y:8.3f}"
+                        f"{z:8.3f}"
+                        f"  1.00  0.00           "
+                        f"{atom_name[0]:>2s}\n"
+                    )
+
+                    atom_serial += 1
+
+                residue_index += 1
+
+            f.write("END\n")
+
+        return coords
